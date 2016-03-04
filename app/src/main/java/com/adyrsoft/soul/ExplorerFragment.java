@@ -1,22 +1,17 @@
 package com.adyrsoft.soul;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
 
 import com.adyrsoft.soul.ui.DirectoryPathView;
+import com.adyrsoft.soul.ui.FileGridItemView;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -71,7 +66,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         File externalStorageRoot = Environment.getExternalStorageDirectory();
         String externalStoragePath = externalStorageRoot.getPath();
         String parentPath = mCurrentDir.getParent();
-        if (parentPath.indexOf(externalStoragePath) >= 0) {
+        if (parentPath != null && parentPath.indexOf(externalStoragePath) >= 0) {
             setCurrentDirectory(mCurrentDir.getParentFile());
             return true;
         } else {
@@ -133,42 +128,28 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            View v = convertView;
-
-            if (v == null || !(v instanceof LinearLayout)) {
-                v = mInflater.inflate(R.layout.file_grid_item_icon, parent, false);
-                ImageView iconView = (ImageView)v.findViewById(R.id.icon_view);
-                TextView fileNameView = (TextView)v.findViewById(R.id.file_name_view);
-
-                FileGridViewHolder viewHolder = new FileGridViewHolder();
-
-                viewHolder.fileNameView = fileNameView;
-                viewHolder.iconView = iconView;
-
-                v.setTag(viewHolder);
+            if (convertView == null || !(convertView instanceof FileGridItemView)) {
+                convertView = createView(parent);
             }
 
-            FileGridViewHolder viewHolder = (FileGridViewHolder)v.getTag();
+            FileGridItemView v = (FileGridItemView)convertView;
 
             File file = getItem(position);
 
-            viewHolder.fileObject = file;
-
-            ImageView iconView = viewHolder.iconView;
-            TextView fileNameView = viewHolder.fileNameView;
-
             if (file.isDirectory()) {
-                iconView.setImageResource(R.drawable.ic_folder_24dp);
+                v.setIconResource(R.drawable.ic_folder_24dp);
             } else {
-                iconView.setImageResource(R.drawable.ic_insert_drive_file_24px);
+                v.setIconResource(R.drawable.ic_insert_drive_file_24px);
             }
 
-            fileNameView.setText(file.getName());
+            v.setFileName(file.getName());
+
+            v.setTag(file);
 
             v.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    File file = ((FileGridViewHolder)v.getTag()).fileObject;
+                    File file = ((File)v.getTag());
                     if (file.isDirectory()) {
                         setCurrentDirectory(file);
                     }
@@ -177,11 +158,12 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
             return v;
         }
+
+        private View createView(ViewGroup parent) {
+            return new FileGridItemView(mContext);
+        }
+
     }
 
-    class FileGridViewHolder {
-        public ImageView iconView;
-        public TextView fileNameView;
-        public File fileObject;
-    }
+
 }
