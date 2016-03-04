@@ -41,13 +41,13 @@ public class ExplorerActivity extends AppCompatActivity {
             mToolbar.removeCallbacks(resetBackCountPress);
             mBackCount++;
             if (mBackCount < 2) {
-                Toast.makeText(this, "Press back again to exit Soul", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.press_back_again_message, Toast.LENGTH_SHORT).show();
                 mToolbar.postDelayed(resetBackCountPress, BACK_PRESS_DELAY_MILLIS);
             } else {
                 mBackCount = 0;
                 super.onBackPressed();
             }
-        };
+        }
 
 
     }

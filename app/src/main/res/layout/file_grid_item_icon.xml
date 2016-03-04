@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:gravity="center">
+    android:layout_height="85dp"
+    android:paddingRight="5dp"
+    android:paddingEnd="5dp"
+    android:paddingLeft="5dp"
+    android:paddingStart="5dp"
+    android:gravity="center_horizontal">
     <ImageView
         android:layout_width="48dp"
         android:layout_height="48dp"
@@ -10,6 +14,8 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:maxLines="2"
+        android:ellipsize="end"
         android:id="@+id/file_name_view"
         android:gravity="center"
         android:textAlignment="center" />

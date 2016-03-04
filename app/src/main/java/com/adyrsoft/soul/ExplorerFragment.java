@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +16,8 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.adyrsoft.soul.ui.DirectoryPathView;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,12 +25,13 @@ import java.util.Arrays;
 /**
  * A placeholder fragment containing a simple view.
  */
-public class ExplorerFragment extends Fragment {
+public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener {
     private static final String DIRECTORY_FILES = "DIRECTORY_FILES";
     private static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
 
     private GridView mGridView;
     private FileGridAdapter mFileGridAdapter;
+    private DirectoryPathView mPathView;
     private File mCurrentDir;
 
     public ExplorerFragment() {
@@ -38,8 +42,13 @@ public class ExplorerFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_explorer, container, false);
         mGridView = (GridView)rootView.findViewById(R.id.file_grid);
+        mPathView = (DirectoryPathView)rootView.findViewById(R.id.directory_path_view);
+
         mFileGridAdapter = new FileGridAdapter(getActivity());
+
         mGridView.setAdapter(mFileGridAdapter);
+
+        mPathView.addOnPathSegmentSelectedListener(this);
 
         if (savedInstanceState != null) {
             ArrayList<String> files = savedInstanceState.getStringArrayList(DIRECTORY_FILES);
@@ -48,6 +57,7 @@ public class ExplorerFragment extends Fragment {
             }
 
             mCurrentDir = new File(savedInstanceState.getString(DIRECTORY_PARENT));
+            mPathView.setCurrentDirectory(mCurrentDir);
         }
 
         return rootView;
@@ -103,7 +113,12 @@ public class ExplorerFragment extends Fragment {
         }
 
         mFileGridAdapter.notifyDataSetChanged();
+        mPathView.setCurrentDirectory(dir);
+    }
 
+    @Override
+    public void OnPathSegmentSelected(DirectoryPathView pathView, View segmentView, File path) {
+        setCurrentDirectory(path);
     }
 
     class FileGridAdapter extends ArrayAdapter<File> {
@@ -124,9 +139,12 @@ public class ExplorerFragment extends Fragment {
                 v = mInflater.inflate(R.layout.file_grid_item_icon, parent, false);
                 ImageView iconView = (ImageView)v.findViewById(R.id.icon_view);
                 TextView fileNameView = (TextView)v.findViewById(R.id.file_name_view);
+
                 FileGridViewHolder viewHolder = new FileGridViewHolder();
+
                 viewHolder.fileNameView = fileNameView;
                 viewHolder.iconView = iconView;
+
                 v.setTag(viewHolder);
             }
 
@@ -140,9 +158,9 @@ public class ExplorerFragment extends Fragment {
             TextView fileNameView = viewHolder.fileNameView;
 
             if (file.isDirectory()) {
-                iconView.setImageResource(R.drawable.ic_folder_black_48dp);
+                iconView.setImageResource(R.drawable.ic_folder_24dp);
             } else {
-                iconView.setImageResource(R.drawable.ic_insert_drive_file_black_48dp);
+                iconView.setImageResource(R.drawable.ic_insert_drive_file_24px);
             }
 
             fileNameView.setText(file.getName());

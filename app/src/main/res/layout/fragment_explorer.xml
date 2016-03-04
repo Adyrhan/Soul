@@ -1,7 +1,17 @@
-<GridView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
     android:layout_height="match_parent"
-    android:layout_width="match_parent"
-    android:numColumns="5"
-    android:scrollbars="vertical"
-    android:id="@+id/file_grid"/>
+    android:layout_width="match_parent" >
+    <com.adyrsoft.soul.ui.DirectoryPathView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/directory_path_view" />
+    <GridView
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:numColumns="5"
+        android:scrollbars="vertical"
+        android:id="@+id/file_grid"/>
+</LinearLayout>
