@@ -129,7 +129,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             if (convertView == null || !(convertView instanceof FileGridItemView)) {
-                convertView = createView(parent);
+                convertView = new FileGridItemView(mContext);
             }
 
             FileGridItemView v = (FileGridItemView)convertView;
@@ -157,10 +157,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             });
 
             return v;
-        }
-
-        private View createView(ViewGroup parent) {
-            return new FileGridItemView(mContext);
         }
 
     }
