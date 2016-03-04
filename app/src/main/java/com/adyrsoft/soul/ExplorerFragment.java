@@ -1,19 +1,29 @@
 package com.adyrsoft.soul;
 
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.MimeTypeMap;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
+import android.widget.Toast;
 
 import com.adyrsoft.soul.ui.DirectoryPathView;
 import com.adyrsoft.soul.ui.FileGridItemView;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -21,6 +31,7 @@ import java.util.Arrays;
  * A placeholder fragment containing a simple view.
  */
 public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener {
+    private static final String TAG = ExplorerFragment.class.getName();
     private static final String DIRECTORY_FILES = "DIRECTORY_FILES";
     private static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
 
@@ -149,9 +160,41 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             v.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    File file = ((File)v.getTag());
+                    File file = ((File) v.getTag());
+
                     if (file.isDirectory()) {
                         setCurrentDirectory(file);
+                    } else {
+                        try {
+                            String mimeType = URLConnection.guessContentTypeFromStream(new FileInputStream(file));
+
+                            if (mimeType == null) {
+                                MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
+                                String fileName = file.getName();
+                                String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
+                                mimeType = mimeTypeMap.getMimeTypeFromExtension(extension);
+                            }
+
+                            if (mimeType == null) {
+                                Toast.makeText(getActivity(), "Unknown file type", Toast.LENGTH_LONG).show();
+                            } else {
+                                Log.d(TAG, "Guessed mimetype for file is " + mimeType);
+                                Intent fileOpenIntent = new Intent(Intent.ACTION_VIEW);
+
+                                fileOpenIntent.setDataAndType(Uri.fromFile(file), mimeType);
+
+                                startActivity(fileOpenIntent);
+                            }
+
+                        } catch (FileNotFoundException e) {
+                            Toast.makeText(getActivity(), "Couldn't open the file. It has been deleted.", Toast.LENGTH_LONG).show();
+                        } catch (IOException e) {
+                            Toast.makeText(getActivity(), "Read error", Toast.LENGTH_LONG).show();
+                        } catch (ActivityNotFoundException e) {
+                            Log.e(TAG, null, e);
+                            Toast.makeText(getActivity(), "There isn't an app installed that can handle this file type", Toast.LENGTH_LONG).show();
+                        }
+
                     }
                 }
             });

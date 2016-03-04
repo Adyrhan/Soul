@@ -13,7 +13,7 @@ import android.widget.Toast;
 
 public class ExplorerActivity extends AppCompatActivity {
     public static final int BACK_PRESS_DELAY_MILLIS = 2000;
-    private Bundle mSavedInstanceState;
+    private static final String STATE_INITIALIZED = "STATE_INITIALIZED";
     private Toolbar mToolbar;
     private int mBackCount;
 
@@ -23,6 +23,7 @@ public class ExplorerActivity extends AppCompatActivity {
             mBackCount = 0;
         }
     };
+    private boolean mInitialized;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,7 +32,9 @@ public class ExplorerActivity extends AppCompatActivity {
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
 
-        mSavedInstanceState = savedInstanceState;
+        if(savedInstanceState != null) {
+            mInitialized = savedInstanceState.getBoolean(STATE_INITIALIZED);
+        }
     }
 
     @Override
@@ -55,12 +58,13 @@ public class ExplorerActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (mSavedInstanceState == null) {
+        if (!mInitialized) {
             ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
 
             if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
                 explorerFragment.setCurrentDirectory(Environment.getExternalStorageDirectory());
             }
+            mInitialized = true;
         }
 
     }
