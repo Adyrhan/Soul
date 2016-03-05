@@ -1,7 +1,10 @@
 package com.adyrsoft.soul;
 
+import android.app.ActionBar;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
@@ -9,10 +12,15 @@ import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.MimeTypeMap;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.Toast;
 
@@ -31,6 +39,12 @@ import java.util.Arrays;
  * A placeholder fragment containing a simple view.
  */
 public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener {
+
+    enum ExplorerState {
+        NAVIGATION,
+        SELECTION
+    }
+
     private static final String TAG = ExplorerFragment.class.getName();
     private static final String DIRECTORY_FILES = "DIRECTORY_FILES";
     private static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
@@ -39,6 +53,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private FileGridAdapter mFileGridAdapter;
     private DirectoryPathView mPathView;
     private File mCurrentDir;
+    private ExplorerState mExplorerState;
 
     public ExplorerFragment() {
     }
@@ -56,6 +71,8 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
         mPathView.addOnPathSegmentSelectedListener(this);
 
+        mExplorerState = ExplorerState.NAVIGATION;
+
         if (savedInstanceState != null) {
             ArrayList<String> files = savedInstanceState.getStringArrayList(DIRECTORY_FILES);
             for(String file : files) {
@@ -65,8 +82,75 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             mCurrentDir = new File(savedInstanceState.getString(DIRECTORY_PARENT));
             mPathView.setCurrentDirectory(mCurrentDir);
         }
-
+        setHasOptionsMenu(true);
         return rootView;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater menuInflater) {
+        switch(mExplorerState) {
+            case NAVIGATION:
+                menuInflater.inflate(R.menu.menu_explorer_navigation, menu);
+                break;
+            case SELECTION:
+                break;
+        }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()) {
+            case R.id.create_folder:
+                final EditText folderNameET = new EditText(getActivity());
+                folderNameET.setSingleLine(true);
+
+                final InputMethodManager imm =
+                        (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+
+                AlertDialog newFolderDialog = new AlertDialog.Builder(getActivity())
+                        .setTitle("Create new folder")
+                        .setMessage("Name your new folder")
+                        .setView(folderNameET)
+                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                String folderName = folderNameET.getText().toString();
+                                createFolder(folderName);
+                                imm.hideSoftInputFromWindow(folderNameET.getWindowToken(), 0);
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                imm.hideSoftInputFromWindow(folderNameET.getWindowToken(), 0);
+                            }
+                        }).create();
+
+                newFolderDialog.show();
+
+                folderNameET.requestFocus();
+
+                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+
+    }
+
+    private void createFolder(String folderName) {
+        File newFolder = new File(mCurrentDir, folderName);
+        if (newFolder.exists()) {
+            Toast.makeText(getActivity(), "Folder already exists", Toast.LENGTH_LONG).show();
+        } else {
+            boolean success = newFolder.mkdirs();
+            if (!success) {
+                Toast.makeText(getActivity(), "Couldn't create folder", Toast.LENGTH_LONG).show();
+            } else {
+                refresh();
+            }
+        }
     }
 
     public boolean onBackPressed() {
@@ -75,8 +159,10 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
     private boolean changeCWDToParentDir() {
         File externalStorageRoot = Environment.getExternalStorageDirectory();
+
         String externalStoragePath = externalStorageRoot.getPath();
         String parentPath = mCurrentDir.getParent();
+
         if (parentPath != null && parentPath.indexOf(externalStoragePath) >= 0) {
             setCurrentDirectory(mCurrentDir.getParentFile());
             return true;
@@ -110,7 +196,13 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
         mCurrentDir = dir;
 
-        File[] files = dir.listFiles();
+        refresh();
+
+        mPathView.setCurrentDirectory(dir);
+    }
+
+    private void refresh() {
+        File[] files = mCurrentDir.listFiles();
 
         mFileGridAdapter.clear();
 
@@ -119,7 +211,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         }
 
         mFileGridAdapter.notifyDataSetChanged();
-        mPathView.setCurrentDirectory(dir);
     }
 
     @Override
@@ -196,6 +287,14 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                         }
 
                     }
+                }
+            });
+
+            v.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+
+                    return true;
                 }
             });
 
