@@ -2,12 +2,16 @@ package com.adyrsoft.soul;
 
 import android.app.ActionBar;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,13 +23,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.MimeTypeMap;
+import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.Toast;
 
+import com.adyrsoft.soul.service.FileSystemErrorType;
+import com.adyrsoft.soul.service.FileSystemTask;
+import com.adyrsoft.soul.service.TaskListener;
 import com.adyrsoft.soul.ui.DirectoryPathView;
 import com.adyrsoft.soul.ui.FileGridItemView;
+import com.adyrsoft.soul.FileTransferService.FileTransferBinder;
+import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,15 +44,23 @@ import java.io.IOException;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 
 /**
- * A placeholder fragment containing a simple view.
+ * This fragment is a full blown file explorer. It changes the menu options on the activity to show
+ * extra operations.
  */
-public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener {
+public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener, RequestFileTransferServiceCallback, TaskListener {
 
-    enum ExplorerState {
+    private enum ExplorerState {
         NAVIGATION,
-        SELECTION
+        SELECTION,
+        UNREADY
+    }
+
+    public interface OnFragmentReadyListener {
+        void onFragmentReady(ExplorerFragment fragment);
     }
 
     private static final String TAG = ExplorerFragment.class.getName();
@@ -54,8 +72,26 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private DirectoryPathView mPathView;
     private File mCurrentDir;
     private ExplorerState mExplorerState;
+    private HashSet<File> mSelectedFileSet = new HashSet<>();
+    private FileTransferService mService;
+    private Menu mMenu;
+    private OnFragmentReadyListener mReadyListener;
+    private TaskProgressDialogFragment mProgressDialogFragment;
+    public List<Uri> mToCopy = new ArrayList<>();
+
 
     public ExplorerFragment() {
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
+        if (!(context instanceof OnFragmentReadyListener)) {
+            throw new RuntimeException(context.getClass().getName() + " must implement OnFragmentReadyListener");
+        }
+
+        mReadyListener = (OnFragmentReadyListener)context;
     }
 
     @Override
@@ -71,7 +107,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
         mPathView.addOnPathSegmentSelectedListener(this);
 
-        mExplorerState = ExplorerState.NAVIGATION;
+        mExplorerState = ExplorerState.UNREADY;
 
         if (savedInstanceState != null) {
             ArrayList<String> files = savedInstanceState.getStringArrayList(DIRECTORY_FILES);
@@ -82,8 +118,44 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             mCurrentDir = new File(savedInstanceState.getString(DIRECTORY_PARENT));
             mPathView.setCurrentDirectory(mCurrentDir);
         }
+
+        ((SoulApplication)getActivity().getApplication()).requestFileTransferService(this);
+
         setHasOptionsMenu(true);
+
         return rootView;
+    }
+
+    @Override
+    public void onServiceReady(FileTransferService mTransferService) {
+        mService = mTransferService;
+        mService.setClientTaskListener(this);
+        stateChange(ExplorerState.NAVIGATION);
+
+        if (mReadyListener != null) {
+            mReadyListener.onFragmentReady(this);
+        }
+    }
+
+    @Override
+    public void onProgressUpdate(FileSystemTask task, int totalFiles, int filesProcessed, int totalBytes, int bytesProcessed) {
+        if (mProgressDialogFragment == null) {
+            mProgressDialogFragment = new TaskProgressDialogFragment();
+            mProgressDialogFragment.setMax(totalFiles);
+            mProgressDialogFragment.show(getChildFragmentManager(), "progressdialog");
+        }
+
+        if (totalFiles == filesProcessed) {
+            mProgressDialogFragment.dismiss();
+        } else {
+            mProgressDialogFragment.setProgress(filesProcessed);
+        }
+
+    }
+
+    @Override
+    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType) {
+
     }
 
     @Override
@@ -91,10 +163,18 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         switch(mExplorerState) {
             case NAVIGATION:
                 menuInflater.inflate(R.menu.menu_explorer_navigation, menu);
+
+                if (mToCopy.size() > 0) {
+                    MenuItem pasteItem = menu.findItem(R.id.paste);
+                    pasteItem.setVisible(true);
+                }
+
                 break;
             case SELECTION:
+                menuInflater.inflate(R.menu.menu_explorer_selection, menu);
                 break;
         }
+        mMenu = menu;
     }
 
     @Override
@@ -133,6 +213,20 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
 
                 return true;
+            case R.id.copy:
+                mToCopy.clear();
+                for(File file : mSelectedFileSet) {
+                    mToCopy.add(Uri.fromFile(file));
+                }
+                stateChange(ExplorerState.NAVIGATION);
+                Toast.makeText(getActivity(), "Selected to copy " + mToCopy.size() + " files", Toast.LENGTH_SHORT).show();
+
+                return true;
+
+            case R.id.paste:
+                mService.copy(mToCopy, Uri.fromFile(mCurrentDir));
+                return true;
+
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -154,7 +248,15 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     }
 
     public boolean onBackPressed() {
-        return !changeCWDToParentDir();
+        switch(mExplorerState) {
+            case NAVIGATION:
+                return !changeCWDToParentDir();
+            case SELECTION:
+                stateChange(ExplorerState.NAVIGATION);
+                return false;
+            default:
+                return false;
+        }
     }
 
     private boolean changeCWDToParentDir() {
@@ -189,7 +291,17 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         setCurrentDirectory(file);
     }
 
+    @Override
+    public void onDestroy() {
+        mService.removeCallback();
+        super.onDestroy();
+    }
+
     public void setCurrentDirectory(File dir) {
+        if (mExplorerState == ExplorerState.UNREADY) {
+            return;
+        }
+
         if (!dir.isDirectory()) {
             throw new IllegalArgumentException(dir.getPath() + " is not a directory");
         }
@@ -213,6 +325,31 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         mFileGridAdapter.notifyDataSetChanged();
     }
 
+    private void stateChange(ExplorerState state) {
+        if (mExplorerState == state) {
+            return;
+        }
+
+        mExplorerState = state;
+
+        switch(state) {
+            case NAVIGATION:
+                mSelectedFileSet.clear();
+                mGridView.dispatchSetSelected(false);
+                getActivity().invalidateOptionsMenu();
+                mGridView.setChoiceMode(AbsListView.CHOICE_MODE_NONE);
+                break;
+            case SELECTION:
+                ActionBar ab = getActivity().getActionBar();
+                mGridView.setChoiceMode(AbsListView.CHOICE_MODE_MULTIPLE);
+                getActivity().invalidateOptionsMenu();
+                break;
+            case UNREADY:
+                break;
+        }
+
+    }
+
     @Override
     public void OnPathSegmentSelected(DirectoryPathView pathView, View segmentView, File path) {
         setCurrentDirectory(path);
@@ -229,12 +366,12 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(final int position, View convertView, ViewGroup parent) {
             if (convertView == null || !(convertView instanceof FileGridItemView)) {
                 convertView = new FileGridItemView(mContext);
             }
 
-            FileGridItemView v = (FileGridItemView)convertView;
+            final FileGridItemView v = (FileGridItemView)convertView;
 
             File file = getItem(position);
 
@@ -248,44 +385,27 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
             v.setTag(file);
 
+            if (mSelectedFileSet.contains(file)) {
+                mGridView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        v.setSelected(true);
+                    }
+                });
+            }
+
             v.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     File file = ((File) v.getTag());
 
-                    if (file.isDirectory()) {
-                        setCurrentDirectory(file);
-                    } else {
-                        try {
-                            String mimeType = URLConnection.guessContentTypeFromStream(new FileInputStream(file));
-
-                            if (mimeType == null) {
-                                MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
-                                String fileName = file.getName();
-                                String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
-                                mimeType = mimeTypeMap.getMimeTypeFromExtension(extension);
-                            }
-
-                            if (mimeType == null) {
-                                Toast.makeText(getActivity(), "Unknown file type", Toast.LENGTH_LONG).show();
-                            } else {
-                                Log.d(TAG, "Guessed mimetype for file is " + mimeType);
-                                Intent fileOpenIntent = new Intent(Intent.ACTION_VIEW);
-
-                                fileOpenIntent.setDataAndType(Uri.fromFile(file), mimeType);
-
-                                startActivity(fileOpenIntent);
-                            }
-
-                        } catch (FileNotFoundException e) {
-                            Toast.makeText(getActivity(), "Couldn't open the file. It has been deleted.", Toast.LENGTH_LONG).show();
-                        } catch (IOException e) {
-                            Toast.makeText(getActivity(), "Read error", Toast.LENGTH_LONG).show();
-                        } catch (ActivityNotFoundException e) {
-                            Log.e(TAG, null, e);
-                            Toast.makeText(getActivity(), "There isn't an app installed that can handle this file type", Toast.LENGTH_LONG).show();
-                        }
-
+                    switch (mExplorerState) {
+                        case NAVIGATION:
+                            navigateOrOpenFile(file);
+                            break;
+                        case SELECTION:
+                            switchSelectedFileState(file, v);
+                            break;
                     }
                 }
             });
@@ -293,7 +413,16 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             v.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View v) {
+                    stateChange(ExplorerState.SELECTION);
 
+                    File file = ((File) v.getTag());
+
+                    boolean select = !mSelectedFileSet.contains(file);
+
+                    if (select) {
+                        v.setSelected(true);
+                        mSelectedFileSet.add(file);
+                    }
                     return true;
                 }
             });
@@ -301,6 +430,55 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             return v;
         }
 
+    }
+
+    private void switchSelectedFileState(File file, View v) {
+        boolean select = !mSelectedFileSet.contains(file);
+
+        v.setSelected(select);
+
+        if (select) {
+            mSelectedFileSet.add(file);
+        } else {
+            mSelectedFileSet.remove(file);
+        }
+    }
+
+    private void navigateOrOpenFile(File file) {
+        if (file.isDirectory()) {
+            setCurrentDirectory(file);
+        } else {
+            try {
+                String mimeType = URLConnection.guessContentTypeFromStream(new FileInputStream(file));
+
+                if (mimeType == null) {
+                    MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
+                    String fileName = file.getName();
+                    String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
+                    mimeType = mimeTypeMap.getMimeTypeFromExtension(extension);
+                }
+
+                if (mimeType == null) {
+                    Toast.makeText(getActivity(), "Unknown file type", Toast.LENGTH_LONG).show();
+                } else {
+                    Log.d(TAG, "Guessed mimetype for file is " + mimeType);
+                    Intent fileOpenIntent = new Intent(Intent.ACTION_VIEW);
+
+                    fileOpenIntent.setDataAndType(Uri.fromFile(file), mimeType);
+
+                    startActivity(fileOpenIntent);
+                }
+
+            } catch (FileNotFoundException e) {
+                Toast.makeText(getActivity(), "Couldn't open the file. It has been deleted.", Toast.LENGTH_LONG).show();
+            } catch (IOException e) {
+                Toast.makeText(getActivity(), "Read error", Toast.LENGTH_LONG).show();
+            } catch (ActivityNotFoundException e) {
+                Log.e(TAG, null, e);
+                Toast.makeText(getActivity(), "There isn't an app installed that can handle this file type", Toast.LENGTH_LONG).show();
+            }
+
+        }
     }
 
 

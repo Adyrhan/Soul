@@ -11,7 +11,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-public class ExplorerActivity extends AppCompatActivity {
+public class ExplorerActivity extends AppCompatActivity implements ExplorerFragment.OnFragmentReadyListener{
     public static final int BACK_PRESS_DELAY_MILLIS = 2000;
     private static final String STATE_INITIALIZED = "STATE_INITIALIZED";
     private Toolbar mToolbar;
@@ -58,14 +58,6 @@ public class ExplorerActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (!mInitialized) {
-            ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
-
-            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-                explorerFragment.setCurrentDirectory(Environment.getExternalStorageDirectory());
-            }
-            mInitialized = true;
-        }
 
     }
 
@@ -86,5 +78,15 @@ public class ExplorerActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onFragmentReady(ExplorerFragment fragment) {
+        if (!mInitialized) {
+            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+                fragment.setCurrentDirectory(Environment.getExternalStorageDirectory());
+            }
+            mInitialized = true;
+        }
     }
 }

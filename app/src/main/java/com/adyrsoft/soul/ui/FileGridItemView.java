@@ -17,6 +17,7 @@ import java.io.File;
 /**
  * Created by Adrian on 04/03/2016.
  */
+
 public class FileGridItemView extends LinearLayout {
     private int mDefStyleAttr;
     private AttributeSet mAttributeSet;
@@ -52,6 +53,7 @@ public class FileGridItemView extends LinearLayout {
         setPadding((int)(5 * mScreenDensity), 0, (int)(5 * mScreenDensity), 0);
         setGravity(Gravity.CENTER_HORIZONTAL);
         setOrientation(VERTICAL);
+        setBackgroundResource(R.drawable.file_grid_item_view_drawable);
 
         inflate(getContext(), R.layout.file_grid_item_icon, this);
 

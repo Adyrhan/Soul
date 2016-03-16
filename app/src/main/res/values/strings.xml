@@ -4,4 +4,5 @@
     <string name="press_back_again_message">Press back again to exit Soul</string>
     <string name="root_path_segment_name">Device</string>
     <string name="menu_item_new_folder">New folder</string>
+    <string name="menu_item_copy">Copy</string>
 </resources>
