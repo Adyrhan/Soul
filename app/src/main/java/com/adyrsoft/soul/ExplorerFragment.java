@@ -2,16 +2,12 @@ package com.adyrsoft.soul;
 
 import android.app.ActionBar;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Environment;
-import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -34,7 +30,6 @@ import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.TaskListener;
 import com.adyrsoft.soul.ui.DirectoryPathView;
 import com.adyrsoft.soul.ui.FileGridItemView;
-import com.adyrsoft.soul.FileTransferService.FileTransferBinder;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
 import java.io.File;
@@ -63,9 +58,12 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         void onFragmentReady(ExplorerFragment fragment);
     }
 
+    private static final String TAG_PROGRESS_DIALOG_FRAGMENT = "progressdialog";
+    private static final String EXPLORER_STATE = "EXPLORER_STATE";
     private static final String TAG = ExplorerFragment.class.getName();
     private static final String DIRECTORY_FILES = "DIRECTORY_FILES";
     private static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
+    private static final String SELECTED_FILES = "SELECTED_FILES";
 
     private GridView mGridView;
     private FileGridAdapter mFileGridAdapter;
@@ -110,16 +108,22 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         mExplorerState = ExplorerState.UNREADY;
 
         if (savedInstanceState != null) {
+            ExplorerState savedState = ExplorerState.values()[savedInstanceState.getInt(EXPLORER_STATE)];
+            stateChange(savedState);
+
+            mCurrentDir = new File(savedInstanceState.getString(DIRECTORY_PARENT));
+            mPathView.setCurrentDirectory(mCurrentDir);
+
+            ArrayList<String> selectedFiles = savedInstanceState.getStringArrayList(SELECTED_FILES);
+            for(String file: selectedFiles) {
+                mSelectedFileSet.add(new File(file));
+            }
+
             ArrayList<String> files = savedInstanceState.getStringArrayList(DIRECTORY_FILES);
             for(String file : files) {
                 mFileGridAdapter.add(new File(file));
             }
-
-            mCurrentDir = new File(savedInstanceState.getString(DIRECTORY_PARENT));
-            mPathView.setCurrentDirectory(mCurrentDir);
         }
-
-        ((SoulApplication)getActivity().getApplication()).requestFileTransferService(this);
 
         setHasOptionsMenu(true);
 
@@ -127,10 +131,18 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     }
 
     @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        ((SoulApplication)getActivity().getApplication()).requestFileTransferService(this);
+    }
+
+    @Override
     public void onServiceReady(FileTransferService mTransferService) {
         mService = mTransferService;
         mService.setClientTaskListener(this);
-        stateChange(ExplorerState.NAVIGATION);
+        if (mExplorerState == ExplorerState.UNREADY) {
+            stateChange(ExplorerState.NAVIGATION);
+        }
 
         if (mReadyListener != null) {
             mReadyListener.onFragmentReady(this);
@@ -139,14 +151,18 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
     @Override
     public void onProgressUpdate(FileSystemTask task, int totalFiles, int filesProcessed, int totalBytes, int bytesProcessed) {
+        mProgressDialogFragment = (TaskProgressDialogFragment)getChildFragmentManager()
+                .findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
+
         if (mProgressDialogFragment == null) {
             mProgressDialogFragment = new TaskProgressDialogFragment();
             mProgressDialogFragment.setMax(totalFiles);
-            mProgressDialogFragment.show(getChildFragmentManager(), "progressdialog");
+            mProgressDialogFragment.show(getChildFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
         }
 
         if (totalFiles == filesProcessed) {
             mProgressDialogFragment.dismiss();
+            refresh();
         } else {
             mProgressDialogFragment.setProgress(filesProcessed);
         }
@@ -284,6 +300,14 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         out.putStringArrayList(DIRECTORY_FILES, files);
 
         out.putString(DIRECTORY_PARENT, mCurrentDir.getPath());
+
+        ArrayList<String> selectedFiles = new ArrayList<>();
+        for(File file : mSelectedFileSet) {
+            selectedFiles.add(file.getPath());
+        }
+        out.putStringArrayList(SELECTED_FILES, selectedFiles);
+
+        out.putInt(EXPLORER_STATE, mExplorerState.ordinal());
     }
 
     public void setCurrentDirectory(String path) {
@@ -340,7 +364,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 mGridView.setChoiceMode(AbsListView.CHOICE_MODE_NONE);
                 break;
             case SELECTION:
-                ActionBar ab = getActivity().getActionBar();
                 mGridView.setChoiceMode(AbsListView.CHOICE_MODE_MULTIPLE);
                 getActivity().invalidateOptionsMenu();
                 break;
