@@ -1,5 +1,6 @@
 package com.adyrsoft.soul;
 
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.design.widget.FloatingActionButton;
@@ -12,12 +13,21 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-public class ExplorerActivity extends AppCompatActivity implements ExplorerFragment.OnFragmentReadyListener{
+import com.adyrsoft.soul.service.FileSystemErrorType;
+import com.adyrsoft.soul.service.FileSystemTask;
+import com.adyrsoft.soul.service.TaskListener;
+import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
+
+public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, TaskListener{
     public static final int BACK_PRESS_DELAY_MILLIS = 2000;
     private static final String STATE_INITIALIZED = "STATE_INITIALIZED";
     private static final String TAG = ExplorerActivity.class.getName();
+    private static final String TAG_PROGRESS_DIALOG_FRAGMENT = "progressdialog";
     private Toolbar mToolbar;
     private int mBackCount;
+    private boolean mInitialized;
+    private FileTransferService mService;
+    private TaskProgressDialogFragment mProgressDialogFragment;
 
     private Runnable resetBackCountPress = new Runnable() {
         @Override
@@ -25,7 +35,6 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
             mBackCount = 0;
         }
     };
-    private boolean mInitialized;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,6 +47,8 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
             mInitialized = savedInstanceState.getBoolean(STATE_INITIALIZED);
             Log.d(TAG, "loading saved state");
         }
+
+        ((SoulApplication)getApplication()).requestFileTransferService(this);
     }
 
     @Override
@@ -45,6 +56,31 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
         super.onSaveInstanceState(out);
         out.putBoolean(STATE_INITIALIZED, mInitialized);
         Log.d(TAG, "Saving state");
+    }
+
+    @Override
+    public void onProgressUpdate(FileSystemTask task, int totalFiles, int filesProcessed, int totalBytes, int bytesProcessed) {
+        mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager()
+                .findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
+
+        if (mProgressDialogFragment == null) {
+            mProgressDialogFragment = new TaskProgressDialogFragment();
+            mProgressDialogFragment.setMax(totalFiles);
+            mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+        }
+
+        if (totalFiles == filesProcessed) {
+            mProgressDialogFragment.dismiss();
+            ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
+            explorerFragment.refresh();
+        } else {
+            mProgressDialogFragment.setProgress(filesProcessed);
+        }
+    }
+
+    @Override
+    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType) {
+
     }
 
     @Override
@@ -85,12 +121,23 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
     }
 
     @Override
-    public void onFragmentReady(ExplorerFragment fragment) {
+    public void onServiceReady(FileTransferService transferService) {
+        mService = transferService;
+        mService.setClientTaskListener(this);
+        ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
+        explorerFragment.setFileTransferService(transferService);
+
         if (!mInitialized) {
             if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-                fragment.setCurrentDirectory(Environment.getExternalStorageDirectory());
+                explorerFragment.setCurrentDirectory(Environment.getExternalStorageDirectory());
             }
             mInitialized = true;
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        mService.removeCallback();
+        super.onDestroy();
     }
 }

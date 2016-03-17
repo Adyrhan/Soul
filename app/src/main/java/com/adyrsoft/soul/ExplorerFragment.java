@@ -1,6 +1,5 @@
 package com.adyrsoft.soul;
 
-import android.app.ActionBar;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -46,7 +45,7 @@ import java.util.List;
  * This fragment is a full blown file explorer. It changes the menu options on the activity to show
  * extra operations.
  */
-public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener, RequestFileTransferServiceCallback, TaskListener {
+public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener {
 
     private enum ExplorerState {
         NAVIGATION,
@@ -54,11 +53,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         UNREADY
     }
 
-    public interface OnFragmentReadyListener {
-        void onFragmentReady(ExplorerFragment fragment);
-    }
-
-    private static final String TAG_PROGRESS_DIALOG_FRAGMENT = "progressdialog";
     private static final String EXPLORER_STATE = "EXPLORER_STATE";
     private static final String TAG = ExplorerFragment.class.getName();
     private static final String DIRECTORY_FILES = "DIRECTORY_FILES";
@@ -73,23 +67,11 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private HashSet<File> mSelectedFileSet = new HashSet<>();
     private FileTransferService mService;
     private Menu mMenu;
-    private OnFragmentReadyListener mReadyListener;
     private TaskProgressDialogFragment mProgressDialogFragment;
     public List<Uri> mToCopy = new ArrayList<>();
 
 
     public ExplorerFragment() {
-    }
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-
-        if (!(context instanceof OnFragmentReadyListener)) {
-            throw new RuntimeException(context.getClass().getName() + " must implement OnFragmentReadyListener");
-        }
-
-        mReadyListener = (OnFragmentReadyListener)context;
     }
 
     @Override
@@ -130,48 +112,11 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         return rootView;
     }
 
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        ((SoulApplication)getActivity().getApplication()).requestFileTransferService(this);
-    }
-
-    @Override
-    public void onServiceReady(FileTransferService mTransferService) {
-        mService = mTransferService;
-        mService.setClientTaskListener(this);
+    public void setFileTransferService(FileTransferService service) {
+        mService = service;
         if (mExplorerState == ExplorerState.UNREADY) {
             stateChange(ExplorerState.NAVIGATION);
         }
-
-        if (mReadyListener != null) {
-            mReadyListener.onFragmentReady(this);
-        }
-    }
-
-    @Override
-    public void onProgressUpdate(FileSystemTask task, int totalFiles, int filesProcessed, int totalBytes, int bytesProcessed) {
-        mProgressDialogFragment = (TaskProgressDialogFragment)getChildFragmentManager()
-                .findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
-
-        if (mProgressDialogFragment == null) {
-            mProgressDialogFragment = new TaskProgressDialogFragment();
-            mProgressDialogFragment.setMax(totalFiles);
-            mProgressDialogFragment.show(getChildFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
-        }
-
-        if (totalFiles == filesProcessed) {
-            mProgressDialogFragment.dismiss();
-            refresh();
-        } else {
-            mProgressDialogFragment.setProgress(filesProcessed);
-        }
-
-    }
-
-    @Override
-    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType) {
-
     }
 
     @Override
@@ -315,12 +260,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         setCurrentDirectory(file);
     }
 
-    @Override
-    public void onDestroy() {
-        mService.removeCallback();
-        super.onDestroy();
-    }
-
     public void setCurrentDirectory(File dir) {
         if (mExplorerState == ExplorerState.UNREADY) {
             return;
@@ -337,7 +276,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         mPathView.setCurrentDirectory(dir);
     }
 
-    private void refresh() {
+    public void refresh() {
         File[] files = mCurrentDir.listFiles();
 
         mFileGridAdapter.clear();

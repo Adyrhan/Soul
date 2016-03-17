@@ -29,9 +29,14 @@ public class TaskProgressDialogFragment extends DialogFragment {
         mDialog.setCancelable(false);
         mDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         mDialog.setMax(mMaxProgress);
-        mDialog.setProgress(mProgress);
 
         return mDialog;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mDialog.setProgress(mProgress);
     }
 
     @Override
