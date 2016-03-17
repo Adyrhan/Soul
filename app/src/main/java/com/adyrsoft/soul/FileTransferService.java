@@ -61,22 +61,22 @@ public class FileTransferService extends Service implements TaskListener {
         mExecutor = Executors.newCachedThreadPool();
     }
 
-    public FileSystemTask copy(List<Uri> srcs, Uri dest) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.COPY, srcs, dest, this, mHandler);
+    public FileSystemTask copy(Uri srcWD, List<Uri> srcs, Uri dest) {
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.COPY, srcWD, srcs, dest, this, mHandler);
         Future future = mExecutor.submit(task);
         task.setTaskFuture(future);
         return task;
     }
 
-    public FileSystemTask move(List<Uri> srcs, Uri dest) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.MOVE, srcs, dest, this, mHandler);
+    public FileSystemTask move(Uri srcWD, List<Uri> srcs, Uri dest) {
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.MOVE, srcWD, srcs, dest, this, mHandler);
         Future future = mExecutor.submit(task);
         task.setTaskFuture(future);
         return task;
     }
 
-    public FileSystemTask remove(List<Uri> srcs) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.REMOVE, srcs, null, this, mHandler);
+    public FileSystemTask remove(Uri srcWD, List<Uri> srcs) {
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.REMOVE, srcWD, srcs, null, this, mHandler);
         Future future = mExecutor.submit(task);
         task.setTaskFuture(future);
         return task;

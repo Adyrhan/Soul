@@ -63,6 +63,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private FileGridAdapter mFileGridAdapter;
     private DirectoryPathView mPathView;
     private File mCurrentDir;
+    private Uri mSrcWD;
     private ExplorerState mExplorerState;
     private HashSet<File> mSelectedFileSet = new HashSet<>();
     private FileTransferService mService;
@@ -176,16 +177,21 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 return true;
             case R.id.copy:
                 mToCopy.clear();
+
                 for(File file : mSelectedFileSet) {
                     mToCopy.add(Uri.fromFile(file));
                 }
+
+                mSrcWD = Uri.fromFile(mCurrentDir);
+
                 stateChange(ExplorerState.NAVIGATION);
+
                 Toast.makeText(getActivity(), "Selected to copy " + mToCopy.size() + " files", Toast.LENGTH_SHORT).show();
 
                 return true;
 
             case R.id.paste:
-                mService.copy(mToCopy, Uri.fromFile(mCurrentDir));
+                mService.copy(mSrcWD, mToCopy, Uri.fromFile(mCurrentDir));
                 return true;
 
             default:

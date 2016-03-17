@@ -48,7 +48,18 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             Log.d(TAG, "loading saved state");
         }
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         ((SoulApplication)getApplication()).requestFileTransferService(this);
+    }
+
+    @Override
+    protected void onPause() {
+        mService.removeCallback();
+        super.onPause();
     }
 
     @Override
@@ -137,7 +148,6 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
     @Override
     public void onDestroy() {
-        mService.removeCallback();
         super.onDestroy();
     }
 }

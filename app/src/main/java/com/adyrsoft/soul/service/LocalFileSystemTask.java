@@ -4,6 +4,9 @@ import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -12,12 +15,12 @@ import java.util.List;
 public class LocalFileSystemTask extends FileSystemTask {
     public static final String TAG = LocalFileSystemTask.class.getName();
 
-    public LocalFileSystemTask(FileOperation op, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler) {
-        super(op, srcs, dst, listener, uiHandler);
+    public LocalFileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler) {
+        super(op, srcWD, srcs, dst, listener, uiHandler);
     }
 
     @Override
-    protected void copy(List<Uri> srcs, Uri dst) {
+    protected void copy(Uri srcWD, List<Uri> srcs, Uri dst) {
         int processedFiles = 0;
         for(Uri src : srcs) {
             try {
@@ -31,12 +34,12 @@ public class LocalFileSystemTask extends FileSystemTask {
     }
 
     @Override
-    protected void move(List<Uri> srcs, Uri dst) {
+    protected void move(Uri srcWD, List<Uri> srcs, Uri dst) {
 
     }
 
     @Override
-    protected void remove(List<Uri> srcs) {
+    protected void remove(Uri srcWD, List<Uri> srcs) {
 
     }
 }
