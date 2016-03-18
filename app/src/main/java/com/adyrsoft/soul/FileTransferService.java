@@ -48,6 +48,7 @@ public class FileTransferService extends Service implements TaskListener {
     }
 
     public FileTransferService() {
+
     }
 
     @Override
