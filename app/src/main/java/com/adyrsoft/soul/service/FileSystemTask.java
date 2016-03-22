@@ -3,6 +3,10 @@ package com.adyrsoft.soul.service;
 import android.net.Uri;
 import android.os.Handler;
 
+import com.adyrsoft.soul.utils.StreamDuplicator;
+
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.Future;
 
@@ -10,15 +14,28 @@ import java.util.concurrent.Future;
  * Created by Adrian on 15/03/2016.
  */
 public abstract class FileSystemTask implements Runnable {
-    private final Handler mUiHandler;
+    private Handler mUiHandler;
     private FileOperation mOp;
     private Uri mSrcWD;
     private List<Uri> mSrcs;
     private Uri mDst;
     private TaskListener mListener;
     private Future mFuture;
+    private StreamDuplicator mStreamDuplicator;
+    private int mTotalFiles;
+    private int mProcessedFiles;
+    private int mProcessedBytes;
+    private int mTotalBytes;
 
     public FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler) {
+        init(op, srcWD, srcs, dst, listener, uiHandler, null);
+    }
+
+    FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler, StreamDuplicator duplicator) {
+        init(op, srcWD, srcs, dst, listener, uiHandler, duplicator);
+    }
+
+    private void init(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler, StreamDuplicator duplicator) {
         if (srcs == null) {
             throw new NullPointerException("srcs cannot be null");
         }
@@ -39,12 +56,21 @@ public abstract class FileSystemTask implements Runnable {
             throw new NullPointerException("srcWD cannot be null");
         }
 
+        if (duplicator == null) {
+            duplicator = new StreamDuplicator();
+        }
+
         mOp = op;
         mSrcWD = srcWD;
         mSrcs = srcs;
         mDst = dst;
         mListener = listener;
         mUiHandler = uiHandler;
+        mStreamDuplicator = duplicator;
+    }
+
+    public StreamDuplicator getStreamDuplicator() {
+        return mStreamDuplicator;
     }
 
     @Override
@@ -97,4 +123,45 @@ public abstract class FileSystemTask implements Runnable {
     protected abstract void copy(Uri srcWD, List<Uri> srcs, Uri dst);
     protected abstract void move(Uri srcWD, List<Uri> srcs, Uri dst);
     protected abstract void remove(Uri srcWD, List<Uri> srcs);
+
+    protected int getTotalFiles() {
+        return mTotalFiles;
+    }
+
+    protected void setTotalFiles(int totalFiles) {
+        mTotalFiles = totalFiles;
+    }
+
+    protected int getProcessedFiles() {
+        return mProcessedFiles;
+    }
+
+    protected void setProcessedFiles(int processedFiles) {
+        mProcessedFiles = processedFiles;
+    }
+
+    protected void incrementProcessedBytes(int processedBytes) {
+        mProcessedBytes += processedBytes;
+    }
+
+    protected void incrementProcessedFiles(int processedFiles) {
+        mProcessedFiles += processedFiles;
+    }
+
+    protected int getProcessedBytes() {
+        return mProcessedBytes;
+    }
+
+
+    protected void setProcessedBytes(int processedBytes) {
+        mProcessedBytes = processedBytes;
+    }
+
+    protected int getTotalBytes() {
+        return mTotalBytes;
+    }
+
+    protected void setTotalBytes(int totalBytes) {
+        mTotalBytes = totalBytes;
+    }
 }

@@ -3,12 +3,9 @@ package com.adyrsoft.soul;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -16,6 +13,7 @@ import android.widget.Toast;
 import com.adyrsoft.soul.service.FileSystemErrorType;
 import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.TaskListener;
+import com.adyrsoft.soul.ui.ErrorDialogFragment;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
 public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, TaskListener{
@@ -36,6 +34,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         }
     };
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,7 +42,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
         Log.d(TAG, "onCreate called");
-        if(savedInstanceState != null) {
+        if (savedInstanceState != null) {
             mInitialized = savedInstanceState.getBoolean(STATE_INITIALIZED);
             Log.d(TAG, "loading saved state");
         }
@@ -71,27 +70,61 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
     @Override
     public void onProgressUpdate(FileSystemTask task, int totalFiles, int filesProcessed, int totalBytes, int bytesProcessed) {
-        mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager()
-                .findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
-
         if (mProgressDialogFragment == null) {
-            mProgressDialogFragment = new TaskProgressDialogFragment();
-            mProgressDialogFragment.setMax(totalFiles);
-            mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+            mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
+            if (mProgressDialogFragment == null) {
+                mProgressDialogFragment = new TaskProgressDialogFragment();
+                mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+            }
         }
 
-        if (totalFiles == filesProcessed) {
-            mProgressDialogFragment.dismiss();
+        mProgressDialogFragment.setMax(totalFiles);
+        mProgressDialogFragment.setProgress(filesProcessed);
+
+        if (totalFiles == filesProcessed && totalFiles != 0) {
             ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
             explorerFragment.refresh();
-        } else {
-            mProgressDialogFragment.setProgress(filesProcessed);
+
+            mProgressDialogFragment.dismiss();
+            mProgressDialogFragment = null;
         }
     }
 
     @Override
     public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType) {
+        ErrorDialogFragment errorDialog = new ErrorDialogFragment();
 
+        switch(errorType) {
+            case DEST_ALREADY_EXISTS:
+                errorDialog.setErrorMessage("Destiny file already exists");
+                break;
+            case FOLDER_ALREADY_EXISTS:
+                errorDialog.setErrorMessage("Destiny folder already exists");
+                break;
+            case SOURCE_DOESNT_EXIST:
+                errorDialog.setErrorMessage("Source file doesn't exist");
+                break;
+            case SOURCE_NOT_READABLE:
+                errorDialog.setErrorMessage("Source isn't readable");
+                break;
+            case DEST_NOT_WRITABLE:
+                errorDialog.setErrorMessage("Destiny file isn't writable");
+                break;
+            case READ_ERROR:
+                errorDialog.setErrorMessage("Read error");
+                break;
+            case WRITE_ERROR:
+                errorDialog.setErrorMessage("Write error");
+                break;
+            case UNKNOWN:
+                errorDialog.setErrorMessage("Unknown error");
+                break;
+            case AUTHENTICATION_ERROR:
+                errorDialog.setErrorMessage("Remote host authentication error");
+                break;
+        }
+
+        errorDialog.show(getSupportFragmentManager(), "errordialog" + (int)(Math.random() * 100000));
     }
 
     @Override
