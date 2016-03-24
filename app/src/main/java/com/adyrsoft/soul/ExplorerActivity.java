@@ -10,8 +10,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.adyrsoft.soul.service.FileOperation;
 import com.adyrsoft.soul.service.FileSystemErrorType;
 import com.adyrsoft.soul.service.FileSystemTask;
+import com.adyrsoft.soul.service.ProgressInfo;
 import com.adyrsoft.soul.service.TaskListener;
 import com.adyrsoft.soul.ui.ErrorDialogFragment;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
@@ -69,19 +71,23 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     }
 
     @Override
-    public void onProgressUpdate(FileSystemTask task, int totalFiles, int filesProcessed, int totalBytes, int bytesProcessed) {
+    public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
         if (mProgressDialogFragment == null) {
             mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
             if (mProgressDialogFragment == null) {
                 mProgressDialogFragment = new TaskProgressDialogFragment();
                 mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+
             }
         }
 
-        mProgressDialogFragment.setMax(totalFiles);
-        mProgressDialogFragment.setProgress(filesProcessed);
+        int totalFiles = info.getTotalFiles();
+        int processedFiles = info.getProcessedFiles();
 
-        if (totalFiles == filesProcessed && totalFiles != 0) {
+        mProgressDialogFragment.setMax(totalFiles);
+        mProgressDialogFragment.setProgress(processedFiles);
+
+        if (totalFiles == processedFiles && totalFiles != 0) {
             ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
             explorerFragment.refresh();
 

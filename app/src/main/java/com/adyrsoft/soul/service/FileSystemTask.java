@@ -5,8 +5,6 @@ import android.os.Handler;
 
 import com.adyrsoft.soul.utils.StreamDuplicator;
 
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.Future;
 
@@ -26,6 +24,8 @@ public abstract class FileSystemTask implements Runnable {
     private int mProcessedFiles;
     private int mProcessedBytes;
     private int mTotalBytes;
+    private Uri mSource;
+    private Uri mDest;
 
     public FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler) {
         init(op, srcWD, srcs, dst, listener, uiHandler, null);
@@ -96,13 +96,22 @@ public abstract class FileSystemTask implements Runnable {
 
     public Future getTaskFuture() { return mFuture; }
 
-    protected void onProgressUpdate(final int totalFiles, final int filesProcessed, final int totalBytes, final int bytesProcessed) {
+    protected void onProgressUpdate() {
+        final ProgressInfo info = new ProgressInfo.Builder()
+                .setSource(getSource())
+                .setDest(getDest())
+                .setProcessedBytes(getProcessedBytes())
+                .setProcessedFiles(getProcessedFiles())
+                .setTotalFiles(getTotalFiles())
+                .setTotalBytes(getTotalBytes())
+                .create();
+
         final FileSystemTask thisTask = this;
         mUiHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (mListener != null) {
-                    mListener.onProgressUpdate(thisTask, totalFiles, filesProcessed, totalBytes, bytesProcessed);
+                    mListener.onProgressUpdate(thisTask, info);
                 }
             }
         });
@@ -124,13 +133,9 @@ public abstract class FileSystemTask implements Runnable {
     protected abstract void move(Uri srcWD, List<Uri> srcs, Uri dst);
     protected abstract void remove(Uri srcWD, List<Uri> srcs);
 
-    protected int getTotalFiles() {
-        return mTotalFiles;
-    }
+    protected int getTotalFiles() { return mTotalFiles; }
 
-    protected void setTotalFiles(int totalFiles) {
-        mTotalFiles = totalFiles;
-    }
+    protected void setTotalFiles(int totalFiles) { mTotalFiles = totalFiles; }
 
     protected int getProcessedFiles() {
         return mProcessedFiles;
@@ -148,10 +153,7 @@ public abstract class FileSystemTask implements Runnable {
         mProcessedFiles += processedFiles;
     }
 
-    protected int getProcessedBytes() {
-        return mProcessedBytes;
-    }
-
+    protected int getProcessedBytes() { return mProcessedBytes; }
 
     protected void setProcessedBytes(int processedBytes) {
         mProcessedBytes = processedBytes;
@@ -164,4 +166,12 @@ public abstract class FileSystemTask implements Runnable {
     protected void setTotalBytes(int totalBytes) {
         mTotalBytes = totalBytes;
     }
+
+    protected Uri getSource() { return mSource; }
+
+    protected void setSource(Uri source) { mSource = source; }
+
+    protected Uri getDest() { return mDest; }
+
+    protected void setDest(Uri dest) { mDest = dest; }
 }

@@ -18,6 +18,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -45,6 +46,9 @@ public class LocalFileSystemTask extends FileSystemTask {
 
             File dstEntry = new File(dst.getPath(), relativePath);
 
+            setSource(entry);
+            setDest(Uri.fromFile(dstEntry));
+
             if (srcEntry.isDirectory()) {
                 if (!dstEntry.exists()) {
                     if (!dstEntry.mkdirs()) {
@@ -61,7 +65,7 @@ public class LocalFileSystemTask extends FileSystemTask {
                 copyFile(srcEntry, dstEntry);
             }
             incrementProcessedFiles(1);
-            onProgressUpdate(getTotalFiles(), getProcessedFiles(), getTotalBytes(), getProcessedBytes());
+            onProgressUpdate();
         }
     }
 
@@ -83,7 +87,7 @@ public class LocalFileSystemTask extends FileSystemTask {
                 @Override
                 public void onDuplicationProgress(int bytesCopied) {
                     incrementProcessedBytes(bytesCopied);
-                    onProgressUpdate(getTotalFiles(), getProcessedFiles(), getTotalBytes(), getProcessedBytes());
+                    onProgressUpdate();
                 }
             });
         } catch (FileNotWritable e) {
@@ -167,6 +171,26 @@ public class LocalFileSystemTask extends FileSystemTask {
 
     @Override
     protected void remove(Uri srcWD, List<Uri> srcs) {
+        List<Uri> expanded = expandFileList(srcs);
+        Collections.reverse(expanded);
 
+        setTotalFiles(expanded.size());
+
+        for (Uri entry : expanded) {
+            File fileEntry = new File(entry.getPath());
+
+            setSource(entry);
+
+            if (!fileEntry.delete()) {
+                if (!fileEntry.exists()) {
+                    onError(entry, null, FileSystemErrorType.SOURCE_DOESNT_EXIST);
+                } else {
+                    onError(entry, null, FileSystemErrorType.UNKNOWN);
+                }
+            }
+
+            incrementProcessedFiles(1);
+            onProgressUpdate();
+        }
     }
 }
