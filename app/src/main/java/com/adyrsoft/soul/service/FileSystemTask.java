@@ -96,6 +96,8 @@ public abstract class FileSystemTask implements Runnable {
 
     public Future getTaskFuture() { return mFuture; }
 
+    public FileOperation getFileOperation() { return mOp; }
+
     protected void onProgressUpdate() {
         final ProgressInfo info = new ProgressInfo.Builder()
                 .setSource(getSource())
