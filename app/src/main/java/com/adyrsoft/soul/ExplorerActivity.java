@@ -10,9 +10,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import com.adyrsoft.soul.service.FileOperation;
 import com.adyrsoft.soul.service.FileSystemErrorType;
 import com.adyrsoft.soul.service.FileSystemTask;
+import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.service.ProgressInfo;
 import com.adyrsoft.soul.service.TaskListener;
 import com.adyrsoft.soul.ui.ErrorDialogFragment;
@@ -74,10 +74,10 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
         if (mProgressDialogFragment == null) {
             mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
+
             if (mProgressDialogFragment == null) {
                 mProgressDialogFragment = new TaskProgressDialogFragment();
                 mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
-
             }
         }
 

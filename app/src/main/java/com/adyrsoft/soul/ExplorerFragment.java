@@ -24,9 +24,7 @@ import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.Toast;
 
-import com.adyrsoft.soul.service.FileSystemErrorType;
-import com.adyrsoft.soul.service.FileSystemTask;
-import com.adyrsoft.soul.service.TaskListener;
+import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.ui.DirectoryPathView;
 import com.adyrsoft.soul.ui.FileGridItemView;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;

@@ -23,7 +23,7 @@
         </activity>
 
         <service
-            android:name=".FileTransferService"
+            android:name=".service.FileTransferService"
             android:enabled="true"
             android:exported="false"></service>
     </application>

@@ -8,6 +8,8 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.adyrsoft.soul.service.FileTransferService;
+
 /**
  * Created by Adrian on 08/03/2016.
  */

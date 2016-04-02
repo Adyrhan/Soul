@@ -1,4 +1,4 @@
-package com.adyrsoft.soul;
+package com.adyrsoft.soul.service;
 
 import android.app.Service;
 import android.content.Intent;
@@ -7,13 +7,6 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 
-import com.adyrsoft.soul.service.FileOperation;
-import com.adyrsoft.soul.service.FileSystemTask;
-import com.adyrsoft.soul.service.LocalFileSystemTask;
-import com.adyrsoft.soul.service.FileSystemErrorType;
-import com.adyrsoft.soul.service.TaskListener;
-
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,7 +14,7 @@ import java.util.concurrent.Future;
 
 public class FileTransferService extends Service implements TaskListener {
     public class FileTransferBinder extends Binder {
-        FileTransferService getService() {
+        public FileTransferService getService() {
             return FileTransferService.this;
         }
     }
@@ -34,9 +27,9 @@ public class FileTransferService extends Service implements TaskListener {
     private TaskListener mClientListener;
 
     @Override
-    public void onProgressUpdate(FileSystemTask task, int totalFiles, int filesProcessed, int totalBytes, int bytesProcessed) {
+    public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
         if (mClientListener != null) {
-            mClientListener.onProgressUpdate(task, totalFiles, filesProcessed, totalBytes, bytesProcessed);
+            mClientListener.onProgressUpdate(task, info);
         }
     }
 
