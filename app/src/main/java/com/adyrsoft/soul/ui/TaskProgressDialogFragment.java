@@ -22,6 +22,8 @@ public class TaskProgressDialogFragment extends DialogFragment {
             mMaxProgress = savedInstanceState.getInt(STATE_MAX_PROGRESS);
         }
 
+        setCancelable(false);
+
         mDialog = new ProgressDialog(getActivity());
         mDialog.setTitle("Copying files");
         mDialog.setMessage("Please wait...");
