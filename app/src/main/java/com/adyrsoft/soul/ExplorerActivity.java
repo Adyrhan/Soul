@@ -12,13 +12,16 @@ import android.widget.Toast;
 
 import com.adyrsoft.soul.service.FileSystemErrorType;
 import com.adyrsoft.soul.service.FileSystemTask;
+import com.adyrsoft.soul.service.FileTransferListener;
 import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.service.ProgressInfo;
 import com.adyrsoft.soul.service.TaskListener;
 import com.adyrsoft.soul.ui.ErrorDialogFragment;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
-public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, TaskListener{
+import java.util.HashMap;
+
+public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, TaskListener, FileTransferListener {
     public static final int BACK_PRESS_DELAY_MILLIS = 2000;
     private static final String STATE_INITIALIZED = "STATE_INITIALIZED";
     private static final String TAG = ExplorerActivity.class.getName();
@@ -60,6 +63,12 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     @Override
     protected void onPause() {
         mService.removeCallback();
+
+        if (mProgressDialogFragment != null) {
+            mProgressDialogFragment.dismiss();
+            mProgressDialogFragment = null;
+        }
+
         super.onPause();
     }
 
@@ -188,5 +197,12 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     @Override
     public void onDestroy() {
         super.onDestroy();
+    }
+
+    @Override
+    public void onSubscription(HashMap<FileSystemTask, ProgressInfo> pendingTasks) {
+        for(FileSystemTask task : pendingTasks.keySet()) {
+            onProgressUpdate(task, pendingTasks.get(task));
+        }
     }
 }

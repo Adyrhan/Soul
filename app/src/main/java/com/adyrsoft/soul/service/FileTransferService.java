@@ -6,7 +6,9 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,10 +26,17 @@ public class FileTransferService extends Service implements TaskListener {
 
     private Handler mHandler;
     private ExecutorService mExecutor;
-    private TaskListener mClientListener;
+    private FileTransferListener mClientListener;
+    private HashMap<FileSystemTask,ProgressInfo> mTaskStatusCache = new HashMap<>();
 
     @Override
     public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
+        if (info.getProcessedFiles() == info.getTotalFiles()) { // Task finished
+            mTaskStatusCache.remove(task);
+        } else {
+            mTaskStatusCache.put(task, info);
+        }
+
         if (mClientListener != null) {
             mClientListener.onProgressUpdate(task, info);
         }
@@ -57,26 +66,39 @@ public class FileTransferService extends Service implements TaskListener {
 
     public FileSystemTask copy(Uri srcWD, List<Uri> srcs, Uri dest) {
         LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.COPY, srcWD, srcs, dest, this, mHandler);
-        Future future = mExecutor.submit(task);
-        task.setTaskFuture(future);
+        addToQueue(task);
         return task;
     }
 
     public FileSystemTask move(Uri srcWD, List<Uri> srcs, Uri dest) {
         LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.MOVE, srcWD, srcs, dest, this, mHandler);
-        Future future = mExecutor.submit(task);
-        task.setTaskFuture(future);
+        addToQueue(task);
         return task;
     }
 
     public FileSystemTask remove(Uri srcWD, List<Uri> srcs) {
         LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.REMOVE, srcWD, srcs, null, this, mHandler);
-        Future future = mExecutor.submit(task);
-        task.setTaskFuture(future);
+        addToQueue(task);
         return task;
     }
 
-    public void setClientTaskListener(TaskListener listener) { mClientListener = listener; }
+    private void addToQueue(LocalFileSystemTask task) {
+        mTaskStatusCache.put(task, new ProgressInfo.Builder().create());
+        Future future = mExecutor.submit(task);
+        task.setTaskFuture(future);
+    }
+
+    public void setClientTaskListener(@NonNull FileTransferListener listener) {
+        mClientListener = listener;
+        HashMap<FileSystemTask, ProgressInfo> taskStatusCache = copyTaskStatusCache();
+        mClientListener.onSubscription(taskStatusCache);
+    }
+
+    private HashMap<FileSystemTask, ProgressInfo> copyTaskStatusCache() {
+        HashMap<FileSystemTask, ProgressInfo> copy = new HashMap<>();
+        copy.putAll(mTaskStatusCache);
+        return copy;
+    }
 
     public void removeCallback() {
         mClientListener = null;
