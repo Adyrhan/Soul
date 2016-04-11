@@ -1,5 +1,6 @@
 package com.adyrsoft.soul;
 
+import com.adyrsoft.soul.utils.StreamDuplicationFailedException;
 import com.adyrsoft.soul.utils.StreamDuplicator;
 
 import org.junit.Assert;
@@ -17,7 +18,7 @@ public class StreamDuplicatorTest {
     private static final int DATA_SIZE = 4096;
 
     @Test
-    public void inputDataIsSameAsOutput() throws IOException {
+    public void inputDataIsSameAsOutput() throws StreamDuplicationFailedException {
         byte[] inputData = new byte[DATA_SIZE];
 
         for(int i = 0; i < DATA_SIZE; i++) {
@@ -34,7 +35,7 @@ public class StreamDuplicatorTest {
     }
 
     @Test
-    public void notifiesOfCopiedData() throws IOException {
+    public void notifiesOfCopiedData() throws StreamDuplicationFailedException {
         byte[] inputData = new byte[DATA_SIZE];
 
         for(int i = 0; i < DATA_SIZE; i++) {
