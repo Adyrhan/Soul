@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Created by Adrian on 15/03/2016.
+ * Subclass of FileSystemTask that represents a file system task on the local file system
  */
 public class LocalFileSystemTask extends FileSystemTask {
     public static final String TAG = LocalFileSystemTask.class.getName();
@@ -32,7 +32,7 @@ public class LocalFileSystemTask extends FileSystemTask {
     }
 
     @Override
-    protected void copy(Uri srcWD, List<Uri> srcs, Uri dst) {
+    protected void copy(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException {
         List<Uri> expandedSrcs = expandFileList(srcs);
 
         setTotalFiles(expandedSrcs.size());
@@ -49,37 +49,144 @@ public class LocalFileSystemTask extends FileSystemTask {
             setSource(entry);
             setDest(Uri.fromFile(dstEntry));
 
-            if (srcEntry.isDirectory()) {
-                if (!dstEntry.exists()) {
-                    if (!dstEntry.mkdirs()) {
-                        onError(entry, Uri.fromFile(dstEntry), FileSystemErrorType.DEST_NOT_WRITABLE);
+            boolean retry = false;
+            boolean overwrite = false;
+
+            Solution errorSolution = null;
+            FileSystemErrorType error = FileSystemErrorType.NONE;
+
+            do {
+                try {
+                    copyEntry(srcEntry, dstEntry, overwrite);
+                } catch (FileCopyFailedException e) {
+                    Throwable cause = e.getCause();
+
+                    if (cause instanceof FileNotReadable) {
+                        error = FileSystemErrorType.SOURCE_NOT_READABLE;
+                        errorSolution = onError(entry, Uri.fromFile(dstEntry), error);
+                    } else if (cause instanceof FileNotWritable) {
+                        error = FileSystemErrorType.DEST_NOT_WRITABLE;
+                        errorSolution = onError(entry, Uri.fromFile(dstEntry), error);
+                    } else if (cause instanceof StreamDuplicationFailedException) {
+                        Throwable subCause = e.getCause();
+
+                        if (subCause instanceof StreamReadFailureException) {
+                            error = FileSystemErrorType.READ_ERROR;
+                            errorSolution = onError(entry, Uri.fromFile(dstEntry), error);
+                        } else {
+                            error = FileSystemErrorType.WRITE_ERROR;
+                            errorSolution = onError(entry, Uri.fromFile(dstEntry), error);
+                        }
+                    } else if (cause instanceof FileNotFoundException) {
+                        error = FileSystemErrorType.SOURCE_DOESNT_EXIST;
+                        errorSolution = onError(entry, Uri.fromFile(dstEntry), error);
+                    } else if (cause instanceof FileAlreadyExists) {
+                        error = FileSystemErrorType.DEST_ALREADY_EXISTS;
+                        errorSolution = onError(entry, Uri.fromFile(dstEntry), error);
                     }
                 }
-            } else {
-                File parentFolder = dstEntry.getParentFile();
-                if (!parentFolder.exists()) {
-                    if(!parentFolder.mkdirs()) {
-                        onError(entry, Uri.fromFile(parentFolder), FileSystemErrorType.DEST_NOT_WRITABLE);
-                    }
+
+                switch (error) {
+                    case NONE:
+                        break;
+                    case DEST_ALREADY_EXISTS:
+                        switch(errorSolution.getAction()) {
+                            case RETRY_CONTINUE:
+                                retry = true;
+                                overwrite = true;
+                                break;
+                            case IGNORE:
+                                break;
+                            case CANCEL:
+                                throw new InterruptedException("User cancelled the task");
+                        }
+                        break;
+                    case SOURCE_DOESNT_EXIST:
+                        switch(errorSolution.getAction()) {
+                            case RETRY_CONTINUE:
+                                retry = true;
+                                break;
+                            case IGNORE:
+                                break;
+                            case CANCEL:
+                                throw new InterruptedException("User cancelled the task");
+                        }
+                        break;
+                    case SOURCE_NOT_READABLE:
+                        switch(errorSolution.getAction()) {
+                            case RETRY_CONTINUE:
+                                retry = true;
+                                break;
+                            case IGNORE:
+                                break;
+                            case CANCEL:
+                                throw new InterruptedException("User cancelled the task");
+                        }
+                        break;
+                    case DEST_NOT_WRITABLE:
+                        switch(errorSolution.getAction()) {
+                            case RETRY_CONTINUE:
+                                retry = true;
+                                break;
+                            case IGNORE:
+                                break;
+                            case CANCEL:
+                                throw new InterruptedException("User cancelled the task");
+                        }
+                        break;
+                    case READ_ERROR:
+                        throw new InterruptedException("Task isn't processable due to read error");
+                    case WRITE_ERROR:
+                        throw new InterruptedException("Task isn't processable due to read error");
+                    case UNKNOWN:
+                        throw new InterruptedException("Task isn't processable due to unknown error");
+                    case AUTHENTICATION_ERROR:
+                        break;
                 }
-                copyFile(srcEntry, dstEntry);
-            }
+            } while (retry);
+
             incrementProcessedFiles(1);
             onProgressUpdate();
         }
     }
 
-    private void copyFile(File srcEntry, File dstEntry) {
+    private void copyEntry(File srcEntry, File dstEntry, boolean overwrite) throws FileCopyFailedException, InterruptedException {
+        if (srcEntry.isDirectory()) {
+            copyDirectory(dstEntry);
+        } else {
+            File parentFolder = dstEntry.getParentFile();
+
+            copyDirectory(parentFolder);
+
+            copyFile(srcEntry, dstEntry, overwrite);
+        }
+    }
+
+    private void copyDirectory(File dstEntry) throws FileCopyFailedException {
+        if (!dstEntry.exists()) {
+            if (!dstEntry.mkdirs()) {
+                throw new FileCopyFailedException(new FileNotReadable(dstEntry));
+            }
+        }
+    }
+
+    private void copyFile(File srcEntry, File dstEntry, boolean overwrite) throws InterruptedException, FileCopyFailedException {
         FileInputStream srcStream = null;
         FileOutputStream dstStream = null;
         Uri srcUri = Uri.fromFile(srcEntry);
         Uri dstUri = Uri.fromFile(dstEntry);
 
         try {
+            if (!srcEntry.exists()) {
+                throw new FileCopyFailedException(new FileNotFoundException("Couldn't find file "+srcEntry.getPath()));
+            }
+
+            if (dstEntry.exists() && !overwrite) {
+                throw new FileCopyFailedException(new FileAlreadyExists(dstEntry));
+            }
+
             srcStream = OpenFileInputStream(srcEntry);
             dstStream = OpenFileOutputStream(dstEntry);
-
-            dstEntry.getParentFile().mkdirs();
 
             StreamDuplicator duplicator = getStreamDuplicator();
 
@@ -90,23 +197,8 @@ public class LocalFileSystemTask extends FileSystemTask {
                     onProgressUpdate();
                 }
             });
-        } catch (FileNotWritable e) {
-            onError(srcUri, dstUri, FileSystemErrorType.DEST_NOT_WRITABLE);
-            Log.e(TAG, "Error opening file for writing", e);
-        } catch (FileNotReadable e) {
-            onError(srcUri, dstUri, FileSystemErrorType.SOURCE_NOT_READABLE);
-            Log.e(TAG, "Error opening file for reading", e);
-        } catch (StreamDuplicationFailedException e) {
-            Throwable cause = e.getCause();
-
-            if (cause == null) {
-                onError(srcUri, dstUri, FileSystemErrorType.UNKNOWN);
-            } else if (cause instanceof StreamReadFailureException) {
-                onError(srcUri, dstUri, FileSystemErrorType.READ_ERROR);
-            } else if (cause instanceof StreamWriteFailureException) {
-                onError(srcUri, dstUri, FileSystemErrorType.WRITE_ERROR);
-            }
-            Log.e(TAG, "Error copying file", e);
+        } catch (StreamDuplicationFailedException | FileNotReadable | FileNotWritable e) {
+            throw new FileCopyFailedException(e);
         } finally {
             FileUtils.closeSilently(srcStream);
             FileUtils.closeSilently(dstStream);
@@ -131,7 +223,7 @@ public class LocalFileSystemTask extends FileSystemTask {
         }
     }
 
-    private List<Uri> expandFileList(List<Uri> srcs) {
+    private List<Uri> expandFileList(List<Uri> srcs) throws InterruptedException {
         List<Uri> expanded = new ArrayList<>();
         List<Uri> unexpanded = new ArrayList<>();
 
@@ -170,7 +262,7 @@ public class LocalFileSystemTask extends FileSystemTask {
     }
 
     @Override
-    protected void remove(Uri srcWD, List<Uri> srcs) {
+    protected void remove(Uri srcWD, List<Uri> srcs) throws InterruptedException {
         List<Uri> expanded = expandFileList(srcs);
         Collections.reverse(expanded);
 
@@ -192,5 +284,21 @@ public class LocalFileSystemTask extends FileSystemTask {
             incrementProcessedFiles(1);
             onProgressUpdate();
         }
+    }
+
+    private class FileCopyFailedException extends Exception {
+        public FileCopyFailedException(Exception e) {
+            super(e);
+        }
+
+        public FileCopyFailedException() {}
+    }
+
+    private class DirectoryCreationFailedException extends Exception {
+        public DirectoryCreationFailedException(Exception e) {
+            super(e);
+        }
+
+        public DirectoryCreationFailedException() {}
     }
 }

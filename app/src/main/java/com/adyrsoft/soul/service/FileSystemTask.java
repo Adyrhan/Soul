@@ -1,6 +1,7 @@
 package com.adyrsoft.soul.service;
 
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Handler;
 
 import com.adyrsoft.soul.utils.StreamDuplicator;
@@ -9,7 +10,9 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 /**
- * Created by Adrian on 15/03/2016.
+ * Object that represents a batch of file operations of the same kind.
+ * Implementations of this class also implement the file operations using the
+ * appropriate protocol or local file system, which will be run by the FileTransferService.
  */
 public abstract class FileSystemTask implements Runnable {
     private Handler mUiHandler;
@@ -75,16 +78,20 @@ public abstract class FileSystemTask implements Runnable {
 
     @Override
     public void run() {
-        switch (mOp) {
-            case COPY:
-                copy(mSrcWD, mSrcs, mDst);
-                break;
-            case MOVE:
-                move(mSrcWD, mSrcs, mDst);
-                break;
-            case REMOVE:
-                remove(mSrcWD, mSrcs);
-                break;
+        try {
+            switch (mOp) {
+                case COPY:
+                    copy(mSrcWD, mSrcs, mDst);
+                    break;
+                case MOVE:
+                    move(mSrcWD, mSrcs, mDst);
+                    break;
+                case REMOVE:
+                    remove(mSrcWD, mSrcs);
+                    break;
+            }
+        } catch (InterruptedException e) {
+            // Task and thread ends here after thread interrumpt
         }
     }
 
@@ -119,21 +126,25 @@ public abstract class FileSystemTask implements Runnable {
         });
     }
 
-    protected void onError(final Uri src, final Uri dst, final FileSystemErrorType errorType) {
+    protected Solution onError(final Uri src, final Uri dst, final FileSystemErrorType errorType) throws InterruptedException {
         final FileSystemTask thisTask = this;
+        final UserFeedbackProvider feedbackProvider = new UserFeedbackProvider();
+
         mUiHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (mListener != null) {
-                    mListener.onError(thisTask, src, dst, errorType);
+                    mListener.onError(thisTask, src, dst, errorType, feedbackProvider);
                 }
             }
         });
+
+        return feedbackProvider.fetchFeedback();
     }
 
-    protected abstract void copy(Uri srcWD, List<Uri> srcs, Uri dst);
-    protected abstract void move(Uri srcWD, List<Uri> srcs, Uri dst);
-    protected abstract void remove(Uri srcWD, List<Uri> srcs);
+    protected abstract void copy(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException;
+    protected abstract void move(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException;
+    protected abstract void remove(Uri srcWD, List<Uri> srcs) throws InterruptedException;
 
     protected int getTotalFiles() { return mTotalFiles; }
 

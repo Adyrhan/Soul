@@ -43,9 +43,9 @@ public class FileTransferService extends Service implements TaskListener {
     }
 
     @Override
-    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType) {
+    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType, UserFeedbackProvider feedbackProvider) {
         if (mClientListener != null) {
-            mClientListener.onError(task, srcFile, dstFile, errorType);
+            mClientListener.onError(task, srcFile, dstFile, errorType, feedbackProvider);
         }
     }
 

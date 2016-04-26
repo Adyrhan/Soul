@@ -3,9 +3,10 @@ package com.adyrsoft.soul.service;
 import android.net.Uri;
 
 /**
- * Created by Adrian on 15/03/2016.
+ * Listener for every client that wants to be updated on the status of FileSystemTasks running
+ * in background.
  */
 public interface TaskListener {
     void onProgressUpdate(FileSystemTask task, ProgressInfo info);
-    void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType);
+    void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType, UserFeedbackProvider feedbackProvider);
 }
