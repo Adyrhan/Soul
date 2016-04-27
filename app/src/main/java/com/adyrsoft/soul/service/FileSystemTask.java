@@ -29,6 +29,7 @@ public abstract class FileSystemTask implements Runnable {
     private int mTotalBytes;
     private Uri mSource;
     private Uri mDest;
+    private TaskResult mTaskResult;
 
     public FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler) {
         init(op, srcWD, srcs, dst, listener, uiHandler, null);
@@ -90,8 +91,11 @@ public abstract class FileSystemTask implements Runnable {
                     remove(mSrcWD, mSrcs);
                     break;
             }
+
+            onTaskFinished();
         } catch (InterruptedException e) {
-            // Task and thread ends here after thread interrumpt
+            mTaskResult = TaskResult.CANCELED;
+            onTaskFinished();
         }
     }
 
@@ -121,6 +125,20 @@ public abstract class FileSystemTask implements Runnable {
             public void run() {
                 if (mListener != null) {
                     mListener.onProgressUpdate(thisTask, info);
+                }
+            }
+        });
+    }
+
+    protected void onTaskFinished() {
+        final TaskResult result = mTaskResult;
+        final FileSystemTask thisTask = this;
+
+        mUiHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mListener != null) {
+                    mListener.onTaskFinished(thisTask, result);
                 }
             }
         });

@@ -16,6 +16,8 @@ import com.adyrsoft.soul.service.FileTransferListener;
 import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.service.ProgressInfo;
 import com.adyrsoft.soul.service.TaskListener;
+import com.adyrsoft.soul.service.TaskResult;
+import com.adyrsoft.soul.service.UserFeedbackProvider;
 import com.adyrsoft.soul.ui.ErrorDialogFragment;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
@@ -106,15 +108,20 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     }
 
     @Override
-    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType) {
+    public void onTaskFinished(FileSystemTask task, TaskResult result) {
+        if (mProgressDialogFragment != null) {
+            mProgressDialogFragment.dismiss();
+            mProgressDialogFragment = null;
+        }
+    }
+
+    @Override
+    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType, UserFeedbackProvider feedbackProvider) {
         ErrorDialogFragment errorDialog = new ErrorDialogFragment();
 
         switch(errorType) {
             case DEST_ALREADY_EXISTS:
                 errorDialog.setErrorMessage("Destiny file already exists");
-                break;
-            case FOLDER_ALREADY_EXISTS:
-                errorDialog.setErrorMessage("Destiny folder already exists");
                 break;
             case SOURCE_DOESNT_EXIST:
                 errorDialog.setErrorMessage("Source file doesn't exist");
