@@ -33,6 +33,14 @@ public class LocalFileSystemTask extends FileSystemTask {
 
     @Override
     protected void copy(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException {
+        LocalFSEntryDuplicator entryDuplicator = new LocalFSEntryDuplicator(getStreamDuplicator(), new StreamDuplicator.OnDuplicationProgressListener() {
+            @Override
+            public void onDuplicationProgress(int bytesCopied) {
+                incrementProcessedBytes(bytesCopied);
+                onProgressUpdate();
+            }
+        });
+
         List<Uri> expandedSrcs = expandFileList(srcs);
 
         setTotalFiles(expandedSrcs.size());
@@ -57,8 +65,8 @@ public class LocalFileSystemTask extends FileSystemTask {
 
             do {
                 try {
-                    copyEntry(srcEntry, dstEntry, overwrite);
-                } catch (FileCopyFailedException e) {
+                    entryDuplicator.copyEntry(srcEntry, dstEntry, overwrite);
+                } catch (LocalFSEntryDuplicator.FileCopyFailedException e) {
                     Throwable cause = e.getCause();
 
                     if (cause instanceof FileNotReadable) {
@@ -150,79 +158,6 @@ public class LocalFileSystemTask extends FileSystemTask {
         }
     }
 
-    private void copyEntry(File srcEntry, File dstEntry, boolean overwrite) throws FileCopyFailedException, InterruptedException {
-        if (srcEntry.isDirectory()) {
-            copyDirectory(dstEntry);
-        } else {
-            File parentFolder = dstEntry.getParentFile();
-
-            copyDirectory(parentFolder);
-
-            copyFile(srcEntry, dstEntry, overwrite);
-        }
-    }
-
-    private void copyDirectory(File dstEntry) throws FileCopyFailedException {
-        if (!dstEntry.exists()) {
-            if (!dstEntry.mkdirs()) {
-                throw new FileCopyFailedException(new FileNotReadable(dstEntry));
-            }
-        }
-    }
-
-    private void copyFile(File srcEntry, File dstEntry, boolean overwrite) throws InterruptedException, FileCopyFailedException {
-        FileInputStream srcStream = null;
-        FileOutputStream dstStream = null;
-        Uri srcUri = Uri.fromFile(srcEntry);
-        Uri dstUri = Uri.fromFile(dstEntry);
-
-        try {
-            if (!srcEntry.exists()) {
-                throw new FileCopyFailedException(new FileNotFoundException("Couldn't find file "+srcEntry.getPath()));
-            }
-
-            if (dstEntry.exists() && !overwrite) {
-                throw new FileCopyFailedException(new FileAlreadyExists(dstEntry));
-            }
-
-            srcStream = OpenFileInputStream(srcEntry);
-            dstStream = OpenFileOutputStream(dstEntry);
-
-            StreamDuplicator duplicator = getStreamDuplicator();
-
-            duplicator.duplicate(srcStream, dstStream, new StreamDuplicator.OnDuplicationProgressListener() {
-                @Override
-                public void onDuplicationProgress(int bytesCopied) {
-                    incrementProcessedBytes(bytesCopied);
-                    onProgressUpdate();
-                }
-            });
-        } catch (StreamDuplicationFailedException | FileNotReadable | FileNotWritable e) {
-            throw new FileCopyFailedException(e);
-        } finally {
-            FileUtils.closeSilently(srcStream);
-            FileUtils.closeSilently(dstStream);
-        }
-    }
-
-    @NonNull
-    private FileOutputStream OpenFileOutputStream(File dstEntry) throws FileNotWritable {
-        try {
-            return new FileOutputStream(dstEntry);
-        } catch (FileNotFoundException e) {
-            throw new FileNotWritable(dstEntry);
-        }
-    }
-
-    @NonNull
-    private FileInputStream OpenFileInputStream(File srcEntry) throws FileNotReadable {
-        try {
-            return new FileInputStream(srcEntry);
-        } catch (FileNotFoundException e) {
-            throw new FileNotReadable(srcEntry);
-        }
-    }
-
     private List<Uri> expandFileList(List<Uri> srcs) throws InterruptedException {
         List<Uri> expanded = new ArrayList<>();
         List<Uri> unexpanded = new ArrayList<>();
@@ -284,21 +219,5 @@ public class LocalFileSystemTask extends FileSystemTask {
             incrementProcessedFiles(1);
             onProgressUpdate();
         }
-    }
-
-    private class FileCopyFailedException extends Exception {
-        public FileCopyFailedException(Exception e) {
-            super(e);
-        }
-
-        public FileCopyFailedException() {}
-    }
-
-    private class DirectoryCreationFailedException extends Exception {
-        public DirectoryCreationFailedException(Exception e) {
-            super(e);
-        }
-
-        public DirectoryCreationFailedException() {}
     }
 }
