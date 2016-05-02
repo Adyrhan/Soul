@@ -3,10 +3,9 @@ package com.adyrsoft.soul.service;
 import android.net.Uri;
 
 /**
- * Created by Adrian on 23/03/2016.
+ * Holds information about the progress of a FileSystemTask
  */
 public class ProgressInfo {
-
     private int mTotalBytes;
     private int mProcessedFiles;
     private int mProcessedBytes;
@@ -124,8 +123,8 @@ public class ProgressInfo {
             return mProcessedBytes;
         }
 
-        public Builder setProcessedBytes(int mProcessedBytes) {
-            mProcessedBytes = mProcessedBytes;
+        public Builder setProcessedBytes(int processedBytes) {
+            mProcessedBytes = processedBytes;
             return this;
         }
 

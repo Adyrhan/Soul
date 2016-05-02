@@ -10,6 +10,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.adyrsoft.soul.service.ErrorInfo;
 import com.adyrsoft.soul.service.FileSystemErrorType;
 import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.FileTransferListener;
@@ -19,6 +20,7 @@ import com.adyrsoft.soul.service.TaskListener;
 import com.adyrsoft.soul.service.TaskResult;
 import com.adyrsoft.soul.service.UserFeedbackProvider;
 import com.adyrsoft.soul.ui.ErrorDialogFragment;
+import com.adyrsoft.soul.ui.FileSystemErrorDialog;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
 import java.util.HashMap;
@@ -116,37 +118,43 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     }
 
     @Override
-    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType, UserFeedbackProvider feedbackProvider) {
-        ErrorDialogFragment errorDialog = new ErrorDialogFragment();
-
-        switch(errorType) {
+    public void onError(FileSystemTask task, ErrorInfo errorInfo) {
+        FileSystemErrorDialog errorDialog = new FileSystemErrorDialog();
+        errorDialog.setUserFeedbackProvider(errorInfo.getFeedbackProvider());
+        switch(errorInfo.getErrorType()) {
             case DEST_ALREADY_EXISTS:
-                errorDialog.setErrorMessage("Destiny file already exists");
+                errorDialog.setErrorDescription("Destiny file already exists");
+                errorDialog.setAffectedFile(errorInfo.getDestinyUri());
+                errorDialog.setRetryButtonLabel("Overwrite");
+                errorDialog.setIgnoreButtonLabel("Keep");
                 break;
             case SOURCE_DOESNT_EXIST:
-                errorDialog.setErrorMessage("Source file doesn't exist");
+                errorDialog.setErrorDescription("Source file doesn't exist");
+                errorDialog.setAffectedFile(errorInfo.getSourceUri());
                 break;
             case SOURCE_NOT_READABLE:
-                errorDialog.setErrorMessage("Source isn't readable");
+                errorDialog.setErrorDescription("Source isn't readable");
+                errorDialog.setAffectedFile(errorInfo.getSourceUri());
                 break;
             case DEST_NOT_WRITABLE:
-                errorDialog.setErrorMessage("Destiny file isn't writable");
+                errorDialog.setErrorDescription("Destiny file isn't writable");
+                errorDialog.setAffectedFile(errorInfo.getDestinyUri());
                 break;
             case READ_ERROR:
-                errorDialog.setErrorMessage("Read error");
+                errorDialog.setErrorDescription("Read error");
                 break;
             case WRITE_ERROR:
-                errorDialog.setErrorMessage("Write error");
+                errorDialog.setErrorDescription("Write error");
                 break;
             case UNKNOWN:
-                errorDialog.setErrorMessage("Unknown error");
+                errorDialog.setErrorDescription("Unknown error");
                 break;
             case AUTHENTICATION_ERROR:
-                errorDialog.setErrorMessage("Remote host authentication error");
+                errorDialog.setErrorDescription("Remote host authentication error");
                 break;
         }
 
-        errorDialog.show(getSupportFragmentManager(), "errordialog" + (int)(Math.random() * 100000));
+        errorDialog.show(getSupportFragmentManager(), "errordialog");
     }
 
     @Override

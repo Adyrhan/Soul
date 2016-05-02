@@ -9,5 +9,5 @@ import android.net.Uri;
 public interface TaskListener {
     void onProgressUpdate(FileSystemTask task, ProgressInfo info);
     void onTaskFinished(FileSystemTask task, TaskResult result);
-    void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType, UserFeedbackProvider feedbackProvider);
+    void onError(FileSystemTask task, ErrorInfo errorInfo);
 }

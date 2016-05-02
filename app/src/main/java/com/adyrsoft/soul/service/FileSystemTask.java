@@ -147,12 +147,19 @@ public abstract class FileSystemTask implements Runnable {
     protected Solution onError(final Uri src, final Uri dst, final FileSystemErrorType errorType) throws InterruptedException {
         final FileSystemTask thisTask = this;
         final UserFeedbackProvider feedbackProvider = new UserFeedbackProvider();
+        final ErrorInfo errorInfo = new ErrorInfo.Builder()
+                .setErrorType(errorType)
+                .setTask(this)
+                .setSourceUri(src)
+                .setDestinyUri(dst)
+                .setFeedbackProvider(feedbackProvider)
+                .create();
 
         mUiHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (mListener != null) {
-                    mListener.onError(thisTask, src, dst, errorType, feedbackProvider);
+                    mListener.onError(thisTask, errorInfo);
                 }
             }
         });

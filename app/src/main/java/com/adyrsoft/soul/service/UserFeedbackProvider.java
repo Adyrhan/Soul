@@ -1,10 +1,17 @@
 package com.adyrsoft.soul.service;
 
+import android.support.annotation.NonNull;
+
 /**
  * Allows the background running FileSystemTask to wait for a user response on error.
  */
 
 public class UserFeedbackProvider {
+    private OnFeedbackProvided mCallback;
+
+    public interface OnFeedbackProvided {
+        void onFeedbackProvided();
+    }
     private Solution mFeedback;
 
     public Solution fetchFeedback() throws InterruptedException {
@@ -24,5 +31,12 @@ public class UserFeedbackProvider {
             mFeedback = feedback;
             notify();
         }
+        if (mCallback != null) {
+            mCallback.onFeedbackProvided();
+        }
+    }
+
+    public void setCallback(OnFeedbackProvided callback) {
+        mCallback = callback;
     }
 }

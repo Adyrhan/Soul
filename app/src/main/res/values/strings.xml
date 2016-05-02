@@ -5,4 +5,9 @@
     <string name="root_path_segment_name">Device</string>
     <string name="menu_item_new_folder">New folder</string>
     <string name="menu_item_copy">Copy</string>
+    <string name="error">Error</string>
+    <string name="affected_file_error_dialog_label">Affected file:</string>
+    <string name="retry_filesystem_error_dialog_button_label">Retry</string>
+    <string name="ignore_filesystem_error_dialog_button_label">Ignore</string>
+    <string name="cancel_filesystem_error_dialog_button_label">Cancel</string>
 </resources>

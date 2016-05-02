@@ -8,7 +8,7 @@ import android.os.Bundle;
 import com.adyrsoft.soul.R;
 
 /**
- * Created by Adrian on 19/03/2016.
+ * General purpose error dialog. Allows to show an error description and an OK button.
  */
 public class ErrorDialogFragment extends DialogFragment{
 
@@ -18,7 +18,7 @@ public class ErrorDialogFragment extends DialogFragment{
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         mDialog = new AlertDialog.Builder(getActivity())
                 .setIcon(R.drawable.ic_error_24dp)
-                .setTitle("Error")
+                .setTitle(R.string.error)
                 .setMessage(mMsg)
                 .setPositiveButton(android.R.string.ok, null)
                 .create();

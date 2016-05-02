@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,14 +29,11 @@ public class FileTransferService extends Service implements TaskListener {
     private ExecutorService mExecutor;
     private FileTransferListener mClientListener;
     private HashMap<FileSystemTask,ProgressInfo> mTaskStatusCache = new HashMap<>();
+    private LinkedList<ErrorInfo> mTaskErrorQueue = new LinkedList<>();
 
     @Override
     public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
-        if (info.getProcessedFiles() == info.getTotalFiles()) { // Task finished
-            mTaskStatusCache.remove(task);
-        } else {
-            mTaskStatusCache.put(task, info);
-        }
+        mTaskStatusCache.put(task, info);
 
         if (mClientListener != null) {
             mClientListener.onProgressUpdate(task, info);
@@ -43,9 +41,28 @@ public class FileTransferService extends Service implements TaskListener {
     }
 
     @Override
-    public void onError(FileSystemTask task, Uri srcFile, Uri dstFile, FileSystemErrorType errorType, UserFeedbackProvider feedbackProvider) {
+    public void onTaskFinished(FileSystemTask task, TaskResult result) {
+        mTaskStatusCache.remove(task);
+
         if (mClientListener != null) {
-            mClientListener.onError(task, srcFile, dstFile, errorType, feedbackProvider);
+            mClientListener.onTaskFinished(task, result);
+        }
+    }
+
+    @Override
+    public void onError(FileSystemTask task, ErrorInfo errorInfo) {
+        UserFeedbackProvider feedbackProvider = errorInfo.getFeedbackProvider();
+
+        feedbackProvider.setCallback(new UserFeedbackProvider.OnFeedbackProvided() {
+            @Override
+            public void onFeedbackProvided() {
+                mTaskErrorQueue.poll();
+                reportError();
+            }
+        });
+
+        if (mClientListener != null) {
+            mClientListener.onError(task, errorInfo);
         }
     }
 
@@ -90,6 +107,22 @@ public class FileTransferService extends Service implements TaskListener {
 
     public void setClientTaskListener(@NonNull FileTransferListener listener) {
         mClientListener = listener;
+        onSubscription();
+    }
+
+    private void onSubscription() {
+        reportAllTasks();
+        reportError();
+    }
+
+    private void reportError() {
+        if (mTaskErrorQueue.peek() != null && mClientListener != null) {
+            ErrorInfo errorInfo = mTaskErrorQueue.peek();
+            mClientListener.onError(errorInfo.getTask(), errorInfo);
+        }
+    }
+
+    private void reportAllTasks() {
         HashMap<FileSystemTask, ProgressInfo> taskStatusCache = copyTaskStatusCache();
         mClientListener.onSubscription(taskStatusCache);
     }

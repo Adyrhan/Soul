@@ -66,6 +66,8 @@ public class LocalFileSystemTask extends FileSystemTask {
             do {
                 try {
                     entryDuplicator.copyEntry(srcEntry, dstEntry, overwrite);
+                    retry = false;
+                    error = FileSystemErrorType.NONE;
                 } catch (LocalFSEntryDuplicator.FileCopyFailedException e) {
                     Throwable cause = e.getCause();
 
