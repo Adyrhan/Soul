@@ -123,7 +123,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         errorDialog.setUserFeedbackProvider(errorInfo.getFeedbackProvider());
         switch(errorInfo.getErrorType()) {
             case DEST_ALREADY_EXISTS:
-                errorDialog.setErrorDescription("Destiny file already exists");
+                errorDialog.setErrorDescription(getString(R.string.destiny_file_already_exists_error_desc));
                 errorDialog.setAffectedFile(errorInfo.getDestinyUri());
                 errorDialog.setRetryButtonLabel("Overwrite");
                 errorDialog.setIgnoreButtonLabel("Keep");

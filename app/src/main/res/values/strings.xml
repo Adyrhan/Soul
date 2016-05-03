@@ -10,4 +10,5 @@
     <string name="retry_filesystem_error_dialog_button_label">Retry</string>
     <string name="ignore_filesystem_error_dialog_button_label">Ignore</string>
     <string name="cancel_filesystem_error_dialog_button_label">Cancel</string>
+    <string name="destiny_file_already_exists_error_desc">Destiny file already exists</string>
 </resources>
