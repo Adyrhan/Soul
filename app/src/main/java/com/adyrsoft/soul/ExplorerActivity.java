@@ -125,32 +125,32 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             case DEST_ALREADY_EXISTS:
                 errorDialog.setErrorDescription(getString(R.string.destiny_file_already_exists_error_desc));
                 errorDialog.setAffectedFile(errorInfo.getDestinyUri());
-                errorDialog.setRetryButtonLabel("Overwrite");
-                errorDialog.setIgnoreButtonLabel("Keep");
+                errorDialog.setRetryButtonLabel(getString(R.string.overwrite_button_label));
+                errorDialog.setIgnoreButtonLabel(getString(R.string.keep_button_label));
                 break;
             case SOURCE_DOESNT_EXIST:
-                errorDialog.setErrorDescription("Source file doesn't exist");
+                errorDialog.setErrorDescription(getString(R.string.source_file_missing_error_desc));
                 errorDialog.setAffectedFile(errorInfo.getSourceUri());
                 break;
             case SOURCE_NOT_READABLE:
-                errorDialog.setErrorDescription("Source isn't readable");
+                errorDialog.setErrorDescription(getString(R.string.source_unreadable_error_desc));
                 errorDialog.setAffectedFile(errorInfo.getSourceUri());
                 break;
             case DEST_NOT_WRITABLE:
-                errorDialog.setErrorDescription("Destiny file isn't writable");
+                errorDialog.setErrorDescription(getString(R.string.destiny_unwritable_error_desc));
                 errorDialog.setAffectedFile(errorInfo.getDestinyUri());
                 break;
             case READ_ERROR:
-                errorDialog.setErrorDescription("Read error");
+                errorDialog.setErrorDescription(getString(R.string.read_error_desc));
                 break;
             case WRITE_ERROR:
-                errorDialog.setErrorDescription("Write error");
+                errorDialog.setErrorDescription(getString(R.string.write_error_desc));
                 break;
             case UNKNOWN:
-                errorDialog.setErrorDescription("Unknown error");
+                errorDialog.setErrorDescription(getString(R.string.unknown_error_desc));
                 break;
             case AUTHENTICATION_ERROR:
-                errorDialog.setErrorDescription("Remote host authentication error");
+                errorDialog.setErrorDescription(getString(R.string.remote_host_auth_error_desc));
                 break;
         }
 

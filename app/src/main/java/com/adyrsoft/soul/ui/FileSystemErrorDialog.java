@@ -1,7 +1,5 @@
 package com.adyrsoft.soul.ui;
 
-import android.app.AlertDialog;
-import android.app.Dialog;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
@@ -14,9 +12,6 @@ import android.widget.TextView;
 import com.adyrsoft.soul.R;
 import com.adyrsoft.soul.service.Solution;
 import com.adyrsoft.soul.service.UserFeedbackProvider;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Error dialog meant to be used in case of a recoverable error happening while processing a FileSystemTask
