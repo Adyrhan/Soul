@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        android:orientation="vertical"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="15dp"
+    android:paddingTop="15dp"
+    android:paddingRight="15dp">
+
     <TextView
-            android:id="@+id/error_description"
-            android:text="Error description"
-            android:textStyle="bold"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+        android:id="@+id/error_description"
+        android:text="Error description"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="15dp"/>
 
     <TextView
         android:layout_width="wrap_content"
@@ -18,28 +22,69 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="15dp"
         android:textStyle="bold"
         android:text="/some/filesystem/path"
-        android:id="@+id/affected_file"/>
+        android:id="@+id/affected_file"
+        />
+
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="15dp"
+        android:id="@+id/radio_action">
+        <RadioButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/retry_filesystem_error_dialog_button_label"
+            android:id="@+id/retry_option"/>
+
+        <RadioButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/ignore_filesystem_error_dialog_button_label"
+            android:id="@+id/ignore_option"/>
+
+        <RadioButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/cancel_filesystem_error_dialog_button_label"
+            android:id="@+id/cancel_option"/>
+    </RadioGroup>
 
     <LinearLayout
         android:layout_width="match_parent"
+        android:layout_gravity="center_horizontal"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        style="?android:attr/buttonBarStyle"
+        android:gravity="right">
+        <!--<Button-->
+            <!--android:layout_width="0dp"-->
+            <!--android:layout_weight="1"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="@string/retry_filesystem_error_dialog_button_label"-->
+            <!--android:id="@+id/retry_button"-->
+            <!--style="?android:attr/buttonBarButtonStyle"/>-->
+        <!--<Button-->
+            <!--android:layout_width="0dp"-->
+            <!--android:layout_weight="1"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="@string/ignore_filesystem_error_dialog_button_label"-->
+            <!--android:id="@+id/ignore_button"-->
+            <!--style="?android:attr/buttonBarButtonStyle"/>-->
+        <!--<Button-->
+            <!--android:layout_width="0dp"-->
+            <!--android:layout_weight="1"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="@string/cancel_filesystem_error_dialog_button_label"-->
+            <!--android:id="@+id/cancel_button"-->
+            <!--style="?android:attr/buttonBarButtonStyle"/>-->
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/retry_filesystem_error_dialog_button_label"
-            android:id="@+id/retry_button"/>
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/ignore_filesystem_error_dialog_button_label"
-            android:id="@+id/ignore_button"/>
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/cancel_filesystem_error_dialog_button_label"
-            android:id="@+id/cancel_button"/>
+            android:text="@android:string/ok"
+            android:id="@+id/ok"
+            style="?android:attr/buttonBarButtonStyle"/>
     </LinearLayout>
 </LinearLayout>

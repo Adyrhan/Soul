@@ -53,6 +53,8 @@ public class FileTransferService extends Service implements TaskListener {
     public void onError(FileSystemTask task, ErrorInfo errorInfo) {
         UserFeedbackProvider feedbackProvider = errorInfo.getFeedbackProvider();
 
+        mTaskErrorQueue.add(errorInfo);
+
         feedbackProvider.setCallback(new UserFeedbackProvider.OnFeedbackProvided() {
             @Override
             public void onFeedbackProvided() {

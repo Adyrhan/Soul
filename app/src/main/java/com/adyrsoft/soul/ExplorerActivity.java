@@ -42,6 +42,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             mBackCount = 0;
         }
     };
+    private FileSystemErrorDialog mErrorDialog;
 
 
     @Override
@@ -73,6 +74,11 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             mProgressDialogFragment = null;
         }
 
+        if (mErrorDialog != null) {
+            mErrorDialog.dismiss();
+            mErrorDialog = null;
+        }
+
         super.onPause();
     }
 
@@ -89,6 +95,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
 
             if (mProgressDialogFragment == null) {
+                Log.d(TAG, "Showing progress dialog");
                 mProgressDialogFragment = new TaskProgressDialogFragment();
                 mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
             }
@@ -119,42 +126,44 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
     @Override
     public void onError(FileSystemTask task, ErrorInfo errorInfo) {
-        FileSystemErrorDialog errorDialog = new FileSystemErrorDialog();
-        errorDialog.setUserFeedbackProvider(errorInfo.getFeedbackProvider());
+        mErrorDialog = new FileSystemErrorDialog();
+        mErrorDialog.setUserFeedbackProvider(errorInfo.getFeedbackProvider());
+
         switch(errorInfo.getErrorType()) {
             case DEST_ALREADY_EXISTS:
-                errorDialog.setErrorDescription(getString(R.string.destiny_file_already_exists_error_desc));
-                errorDialog.setAffectedFile(errorInfo.getDestinyUri());
-                errorDialog.setRetryButtonLabel(getString(R.string.overwrite_button_label));
-                errorDialog.setIgnoreButtonLabel(getString(R.string.keep_button_label));
+                mErrorDialog.setErrorDescription(getString(R.string.destiny_file_already_exists_error_desc));
+                mErrorDialog.setAffectedFile(errorInfo.getDestinyUri());
+                mErrorDialog.setRetryButtonLabel(getString(R.string.overwrite_button_label));
+                mErrorDialog.setIgnoreButtonLabel(getString(R.string.keep_button_label));
                 break;
             case SOURCE_DOESNT_EXIST:
-                errorDialog.setErrorDescription(getString(R.string.source_file_missing_error_desc));
-                errorDialog.setAffectedFile(errorInfo.getSourceUri());
+                mErrorDialog.setErrorDescription(getString(R.string.source_file_missing_error_desc));
+                mErrorDialog.setAffectedFile(errorInfo.getSourceUri());
                 break;
             case SOURCE_NOT_READABLE:
-                errorDialog.setErrorDescription(getString(R.string.source_unreadable_error_desc));
-                errorDialog.setAffectedFile(errorInfo.getSourceUri());
+                mErrorDialog.setErrorDescription(getString(R.string.source_unreadable_error_desc));
+                mErrorDialog.setAffectedFile(errorInfo.getSourceUri());
                 break;
             case DEST_NOT_WRITABLE:
-                errorDialog.setErrorDescription(getString(R.string.destiny_unwritable_error_desc));
-                errorDialog.setAffectedFile(errorInfo.getDestinyUri());
+                mErrorDialog.setErrorDescription(getString(R.string.destiny_unwritable_error_desc));
+                mErrorDialog.setAffectedFile(errorInfo.getDestinyUri());
                 break;
             case READ_ERROR:
-                errorDialog.setErrorDescription(getString(R.string.read_error_desc));
+                mErrorDialog.setErrorDescription(getString(R.string.read_error_desc));
                 break;
             case WRITE_ERROR:
-                errorDialog.setErrorDescription(getString(R.string.write_error_desc));
+                mErrorDialog.setErrorDescription(getString(R.string.write_error_desc));
                 break;
             case UNKNOWN:
-                errorDialog.setErrorDescription(getString(R.string.unknown_error_desc));
+                mErrorDialog.setErrorDescription(getString(R.string.unknown_error_desc));
                 break;
             case AUTHENTICATION_ERROR:
-                errorDialog.setErrorDescription(getString(R.string.remote_host_auth_error_desc));
+                mErrorDialog.setErrorDescription(getString(R.string.remote_host_auth_error_desc));
                 break;
         }
 
-        errorDialog.show(getSupportFragmentManager(), "errordialog");
+        Log.d(TAG, "Showing error dialog");
+        mErrorDialog.show(getSupportFragmentManager(), "errordialog");
     }
 
     @Override

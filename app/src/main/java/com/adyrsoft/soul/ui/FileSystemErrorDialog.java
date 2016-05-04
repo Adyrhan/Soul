@@ -1,12 +1,16 @@
 package com.adyrsoft.soul.ui;
 
+import android.app.Dialog;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import com.adyrsoft.soul.R;
@@ -38,6 +42,10 @@ public class FileSystemErrorDialog extends DialogFragment {
             throw new IllegalStateException("An UserFeedbackProvider object must be set before showing this dialog");
         }
 
+        //setStyle(DialogFragment.STYLE_NORMAL, 0);
+
+        setCancelable(false);
+
         mRootView = inflater.inflate(R.layout.filesystem_error_dialog, container, false);
 
         String retryButtonLabel = (mRetryButtonLabel != null) ?
@@ -55,9 +63,11 @@ public class FileSystemErrorDialog extends DialogFragment {
         mAffectedFileView = (TextView) mRootView.findViewById(R.id.affected_file);
         mErrorDescriptionView = (TextView) mRootView.findViewById(R.id.error_description);
 
-        Button retryButton = (Button) mRootView.findViewById(R.id.retry_button);
-        Button ignoreButton = (Button) mRootView.findViewById(R.id.ignore_button);
-        Button cancelButton = (Button) mRootView.findViewById(R.id.cancel_button);
+        RadioButton retryButton = (RadioButton) mRootView.findViewById(R.id.retry_option);
+        RadioButton ignoreButton = (RadioButton) mRootView.findViewById(R.id.ignore_option);
+        RadioButton cancelButton = (RadioButton) mRootView.findViewById(R.id.cancel_option);
+
+        final Button okButton = (Button) mRootView.findViewById(R.id.ok);
 
         if (mAffectedFile != null) {
             mAffectedFileView.setText(mAffectedFile.getPath());
@@ -67,40 +77,46 @@ public class FileSystemErrorDialog extends DialogFragment {
             mErrorDescriptionView.setText(mErrorDescription);
         }
 
-        retryButton.setOnClickListener(new View.OnClickListener() {
+        final RadioGroup actionGroup = (RadioGroup) mRootView.findViewById(R.id.radio_action);
+
+        okButton.setEnabled(false);
+
+        actionGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                if (checkedId != -1) {
+                    okButton.setEnabled(true);
+                }
+            }
+        });
+
+        okButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mSolution = new Solution();
-                mSolution.setAction(Solution.Action.RETRY_CONTINUE);
+
+                int checkedId = actionGroup.getCheckedRadioButtonId();
+
+                switch(checkedId) {
+                    case R.id.retry_option:
+                        mSolution.setAction(Solution.Action.RETRY_CONTINUE);
+                        break;
+                    case R.id.ignore_option:
+                        mSolution.setAction(Solution.Action.IGNORE);
+                        break;
+                    case R.id.cancel_option:
+                        mSolution.setAction(Solution.Action.CANCEL);
+                        break;
+                }
+
                 sendFeedback();
                 dismiss();
             }
         });
+
 
         retryButton.setText(retryButtonLabel);
-
-        ignoreButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mSolution = new Solution();
-                mSolution.setAction(Solution.Action.IGNORE);
-                sendFeedback();
-                dismiss();
-            }
-        });
-
         ignoreButton.setText(ignoreButtonLabel);
-
-        cancelButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mSolution = new Solution();
-                mSolution.setAction(Solution.Action.CANCEL);
-                sendFeedback();
-                dismiss();
-            }
-        });
-
         cancelButton.setText(cancelButtonLabel);
 
         return mRootView;
