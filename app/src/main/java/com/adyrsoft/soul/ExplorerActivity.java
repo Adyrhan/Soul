@@ -3,11 +3,15 @@ package com.adyrsoft.soul;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v4.app.FragmentTabHost;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.adyrsoft.soul.service.ErrorInfo;
@@ -48,14 +52,31 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_explorer);
+
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
-        Log.d(TAG, "onCreate called");
+
         if (savedInstanceState != null) {
             mInitialized = savedInstanceState.getBoolean(STATE_INITIALIZED);
             Log.d(TAG, "loading saved state");
         }
+
+        final DrawerLayout drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
+
+        Button backgroundTasksButton = (Button) findViewById(R.id.background_tasks_button);
+        backgroundTasksButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.closeDrawers();
+
+            }
+        });
+
+        FragmentTabHost tabHost = (FragmentTabHost) findViewById(R.id.fragment_tab_host);
+        tabHost.setup(this, getSupportFragmentManager(), R.id.fragment_content);
+        tabHost.addTab(tabHost.newTabSpec("explorer").setIndicator("Local"), ExplorerFragment.class, null);
 
     }
 
@@ -181,7 +202,6 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             }
         }
 
-
     }
 
     @Override
@@ -207,15 +227,15 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     public void onServiceReady(FileTransferService transferService) {
         mService = transferService;
         mService.setClientTaskListener(this);
-        ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
-        explorerFragment.setFileTransferService(transferService);
-
-        if (!mInitialized) {
-            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-                explorerFragment.setCurrentDirectory(Environment.getExternalStorageDirectory());
-            }
-            mInitialized = true;
-        }
+//        ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
+//        explorerFragment.setFileTransferService(transferService);
+//
+//        if (!mInitialized) {
+//            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+//                explorerFragment.setCurrentDirectory(Environment.getExternalStorageDirectory());
+//            }
+//            mInitialized = true;
+//        }
     }
 
     @Override
