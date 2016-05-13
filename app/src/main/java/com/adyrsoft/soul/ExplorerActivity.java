@@ -1,8 +1,6 @@
 package com.adyrsoft.soul;
 
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.v4.app.FragmentTabHost;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -15,21 +13,16 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.adyrsoft.soul.service.ErrorInfo;
-import com.adyrsoft.soul.service.FileSystemErrorType;
 import com.adyrsoft.soul.service.FileSystemTask;
-import com.adyrsoft.soul.service.FileTransferListener;
 import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.service.ProgressInfo;
-import com.adyrsoft.soul.service.TaskListener;
 import com.adyrsoft.soul.service.TaskResult;
-import com.adyrsoft.soul.service.UserFeedbackProvider;
-import com.adyrsoft.soul.ui.ErrorDialogFragment;
 import com.adyrsoft.soul.ui.FileSystemErrorDialog;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
 import java.util.HashMap;
 
-public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, TaskListener, FileTransferListener {
+public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, FileTransferService.TaskProgressListener, FileTransferService.TaskErrorListener {
     public static final int BACK_PRESS_DELAY_MILLIS = 2000;
     private static final String STATE_INITIALIZED = "STATE_INITIALIZED";
     private static final String TAG = ExplorerActivity.class.getName();
@@ -70,7 +63,6 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             @Override
             public void onClick(View v) {
                 drawerLayout.closeDrawers();
-
             }
         });
 
@@ -88,7 +80,8 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
     @Override
     protected void onPause() {
-        mService.removeCallback();
+        mService.removeTaskProgressListener(this);
+        mService.setTaskErrorListener(null);
 
         if (mProgressDialogFragment != null) {
             mProgressDialogFragment.dismiss();
@@ -201,7 +194,6 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
                 super.onBackPressed();
             }
         }
-
     }
 
     @Override
@@ -226,7 +218,8 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     @Override
     public void onServiceReady(FileTransferService transferService) {
         mService = transferService;
-        mService.setClientTaskListener(this);
+        mService.addTaskProgressListener(this);
+        mService.setTaskErrorListener(this);
 //        ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
 //        explorerFragment.setFileTransferService(transferService);
 //
