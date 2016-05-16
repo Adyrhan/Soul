@@ -167,7 +167,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         mProgressDialogFragment.setProgress(processedFiles);
 
         if (totalFiles == processedFiles && totalFiles != 0) {
-            ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
+            ExplorerFragment explorerFragment = (ExplorerFragment) mFragmentAdapter.getItem(mViewPager.getCurrentItem());
             explorerFragment.refresh();
 
             mProgressDialogFragment.dismiss();
