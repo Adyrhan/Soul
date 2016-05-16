@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -43,18 +44,18 @@ import java.util.List;
  * This fragment is a full blown file explorer. It changes the menu options on the activity to show
  * extra operations.
  */
-public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener {
-
+public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener, RequestFileTransferServiceCallback {
     private enum ExplorerState {
         NAVIGATION,
         SELECTION,
         UNREADY
     }
 
+    public static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
+
     private static final String EXPLORER_STATE = "EXPLORER_STATE";
     private static final String TAG = ExplorerFragment.class.getName();
     private static final String DIRECTORY_FILES = "DIRECTORY_FILES";
-    private static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
     private static final String SELECTED_FILES = "SELECTED_FILES";
 
     private GridView mGridView;
@@ -104,17 +105,32 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             for(String file : files) {
                 mFileGridAdapter.add(new File(file));
             }
+        } else if (getArguments() != null ){
+            String currentDirPath = getArguments().getString(DIRECTORY_PARENT);
+            if (currentDirPath != null) {
+                mCurrentDir = new File(currentDirPath);
+            }
         }
 
         setHasOptionsMenu(true);
 
+        requestFileTransferService();
+
         return rootView;
     }
 
-    public void setFileTransferService(FileTransferService service) {
-        mService = service;
+    private void requestFileTransferService() {
+        ((SoulApplication) getActivity().getApplication()).requestFileTransferService(this);
+    }
+
+    @Override
+    public void onServiceReady(FileTransferService transferService) {
+        mService = transferService;
         if (mExplorerState == ExplorerState.UNREADY) {
             stateChange(ExplorerState.NAVIGATION);
+            if (mCurrentDir != null) {
+                setCurrentDirectory(mCurrentDir);
+            }
         }
     }
 
@@ -259,12 +275,12 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         out.putInt(EXPLORER_STATE, mExplorerState.ordinal());
     }
 
-    public void setCurrentDirectory(String path) {
+    public void setCurrentDirectory(@NonNull String path) {
         File file = new File(path);
         setCurrentDirectory(file);
     }
 
-    public void setCurrentDirectory(File dir) {
+    public void setCurrentDirectory(@NonNull File dir) {
         if (mExplorerState == ExplorerState.UNREADY) {
             return;
         }

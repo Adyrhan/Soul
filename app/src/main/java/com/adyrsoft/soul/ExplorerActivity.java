@@ -1,7 +1,13 @@
 package com.adyrsoft.soul;
 
 import android.os.Bundle;
+import android.os.Environment;
+import android.support.design.widget.TabLayout;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.FragmentTabHost;
+import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -10,6 +16,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TableLayout;
 import android.widget.Toast;
 
 import com.adyrsoft.soul.service.ErrorInfo;
@@ -20,6 +27,7 @@ import com.adyrsoft.soul.service.TaskResult;
 import com.adyrsoft.soul.ui.FileSystemErrorDialog;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, FileTransferService.TaskProgressListener, FileTransferService.TaskErrorListener {
@@ -40,6 +48,8 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         }
     };
     private FileSystemErrorDialog mErrorDialog;
+    private ExplorerPagerAdapter mFragmentAdapter;
+    private ViewPager mViewPager;
 
 
     @Override
@@ -66,10 +76,45 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             }
         });
 
-        FragmentTabHost tabHost = (FragmentTabHost) findViewById(R.id.fragment_tab_host);
-        tabHost.setup(this, getSupportFragmentManager(), R.id.fragment_content);
-        tabHost.addTab(tabHost.newTabSpec("explorer").setIndicator("Local"), ExplorerFragment.class, null);
+        mFragmentAdapter = new ExplorerPagerAdapter(getSupportFragmentManager());
 
+        final Bundle explorerBundle = new Bundle();
+        explorerBundle.putString(ExplorerFragment.DIRECTORY_PARENT, Environment.getExternalStorageDirectory().getPath());
+
+        ExplorerFragment explorerFragment = new ExplorerFragment();
+        explorerFragment.setArguments(explorerBundle);
+
+        FragmentEntry fragmentEntry = new FragmentEntry();
+        fragmentEntry.setFragment(explorerFragment);
+        fragmentEntry.setTitle("Local");
+
+
+        mFragmentAdapter.addFragment(fragmentEntry);
+
+        mViewPager = (ViewPager) findViewById(R.id.view_pager);
+        mViewPager.setAdapter(mFragmentAdapter);
+
+        final TabLayout tabLayout = (TabLayout) findViewById(R.id.tab_layout);
+        tabLayout.setupWithViewPager(mViewPager);
+        tabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
+
+        Button addTabButton = (Button) findViewById(R.id.add_tab_button);
+        addTabButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ExplorerFragment explorerFragment = new ExplorerFragment();
+                explorerFragment.setArguments(explorerBundle);
+
+                FragmentEntry fragmentEntry = new FragmentEntry();
+                fragmentEntry.setFragment(explorerFragment);
+                fragmentEntry.setTitle("Local");
+
+                mFragmentAdapter.addFragment(fragmentEntry);
+                tabLayout.setupWithViewPager(mViewPager);
+            }
+        });
+
+        Log.d(TAG, "activity onCreate called");
     }
 
     @Override
@@ -182,7 +227,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
     @Override
     public void onBackPressed() {
-        ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
+        ExplorerFragment explorerFragment = (ExplorerFragment) mFragmentAdapter.getItem(mViewPager.getCurrentItem());
         if (explorerFragment.onBackPressed()) {
             mToolbar.removeCallbacks(resetBackCountPress);
             mBackCount++;
@@ -240,6 +285,65 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     public void onSubscription(HashMap<FileSystemTask, ProgressInfo> pendingTasks) {
         for(FileSystemTask task : pendingTasks.keySet()) {
             onProgressUpdate(task, pendingTasks.get(task));
+        }
+    }
+
+    private class ExplorerPagerAdapter extends FragmentPagerAdapter {
+        private ArrayList<FragmentEntry> mFragmentEntries = new ArrayList<>();
+
+        public ExplorerPagerAdapter(FragmentManager supportFragmentManager) {
+            super(supportFragmentManager);
+        }
+
+        @Override
+        public Fragment getItem(int position) {
+            return mFragmentEntries.get(position).getFragment();
+        }
+
+        @Override
+        public CharSequence getPageTitle(int position) {
+            return mFragmentEntries.get(position).getTitle();
+        }
+
+        @Override
+        public int getCount() {
+            return mFragmentEntries.size();
+        }
+
+        public void addFragment(FragmentEntry fragmentEntry) {
+            mFragmentEntries.add(fragmentEntry);
+            notifyDataSetChanged();
+        }
+
+        public void removeFragment(FragmentEntry fragmentEntry) {
+            mFragmentEntries.remove(fragmentEntry);
+            notifyDataSetChanged();
+        }
+
+        public void removeFragmentAt(int position) {
+            mFragmentEntries.remove(position);
+            notifyDataSetChanged();
+        }
+    }
+
+    private class FragmentEntry {
+        private Fragment mFragment;
+        private String mTitle;
+
+        public Fragment getFragment() {
+            return mFragment;
+        }
+
+        public void setFragment(Fragment fragment) {
+            mFragment = fragment;
+        }
+
+        public String getTitle() {
+            return mTitle;
+        }
+
+        public void setTitle(String title) {
+            mTitle = title;
         }
     }
 }
