@@ -5,8 +5,7 @@ import android.os.Environment;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.app.FragmentTabHost;
+import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -16,7 +15,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TableLayout;
 import android.widget.Toast;
 
 import com.adyrsoft.soul.service.ErrorInfo;
@@ -50,6 +48,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     private FileSystemErrorDialog mErrorDialog;
     private ExplorerPagerAdapter mFragmentAdapter;
     private ViewPager mViewPager;
+    private TabLayout mTabLayout;
 
 
     @Override
@@ -60,11 +59,6 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
-
-        if (savedInstanceState != null) {
-            mInitialized = savedInstanceState.getBoolean(STATE_INITIALIZED);
-            Log.d(TAG, "loading saved state");
-        }
 
         final DrawerLayout drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
 
@@ -78,7 +72,26 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
         mFragmentAdapter = new ExplorerPagerAdapter(getSupportFragmentManager());
 
-        final Bundle explorerBundle = new Bundle();
+        mViewPager = (ViewPager) findViewById(R.id.view_pager);
+        mViewPager.setAdapter(mFragmentAdapter);
+
+        mTabLayout = (TabLayout) findViewById(R.id.tab_layout);
+        mTabLayout.setupWithViewPager(mViewPager);
+        mTabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
+
+        Button addTabButton = (Button) findViewById(R.id.add_tab_button);
+        addTabButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addExplorerTab();
+            }
+        });
+
+        Log.d(TAG, "activity onCreate called");
+    }
+
+    private void addExplorerTab() {
+        Bundle explorerBundle = new Bundle();
         explorerBundle.putString(ExplorerFragment.DIRECTORY_PARENT, Environment.getExternalStorageDirectory().getPath());
 
         ExplorerFragment explorerFragment = new ExplorerFragment();
@@ -88,33 +101,8 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         fragmentEntry.setFragment(explorerFragment);
         fragmentEntry.setTitle("Local");
 
-
         mFragmentAdapter.addFragment(fragmentEntry);
-
-        mViewPager = (ViewPager) findViewById(R.id.view_pager);
-        mViewPager.setAdapter(mFragmentAdapter);
-
-        final TabLayout tabLayout = (TabLayout) findViewById(R.id.tab_layout);
-        tabLayout.setupWithViewPager(mViewPager);
-        tabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
-
-        Button addTabButton = (Button) findViewById(R.id.add_tab_button);
-        addTabButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ExplorerFragment explorerFragment = new ExplorerFragment();
-                explorerFragment.setArguments(explorerBundle);
-
-                FragmentEntry fragmentEntry = new FragmentEntry();
-                fragmentEntry.setFragment(explorerFragment);
-                fragmentEntry.setTitle("Local");
-
-                mFragmentAdapter.addFragment(fragmentEntry);
-                tabLayout.setupWithViewPager(mViewPager);
-            }
-        });
-
-        Log.d(TAG, "activity onCreate called");
+        mTabLayout.setupWithViewPager(mViewPager);
     }
 
     @Override
@@ -125,8 +113,10 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
     @Override
     protected void onPause() {
-        mService.removeTaskProgressListener(this);
-        mService.setTaskErrorListener(null);
+        if (mService != null) {
+            mService.removeTaskProgressListener(this);
+            mService.setTaskErrorListener(null);
+        }
 
         if (mProgressDialogFragment != null) {
             mProgressDialogFragment.dismiss();
@@ -288,7 +278,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         }
     }
 
-    private class ExplorerPagerAdapter extends FragmentPagerAdapter {
+    private class ExplorerPagerAdapter extends FragmentStatePagerAdapter{
         private ArrayList<FragmentEntry> mFragmentEntries = new ArrayList<>();
 
         public ExplorerPagerAdapter(FragmentManager supportFragmentManager) {
