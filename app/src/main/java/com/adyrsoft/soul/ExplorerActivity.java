@@ -15,6 +15,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.adyrsoft.soul.service.ErrorInfo;
@@ -30,12 +31,11 @@ import java.util.HashMap;
 
 public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, FileTransferService.TaskProgressListener, FileTransferService.TaskErrorListener {
     public static final int BACK_PRESS_DELAY_MILLIS = 2000;
-    private static final String STATE_INITIALIZED = "STATE_INITIALIZED";
     private static final String TAG = ExplorerActivity.class.getName();
     private static final String TAG_PROGRESS_DIALOG_FRAGMENT = "progressdialog";
+    private static final String STATE_NUM_FRAGMENTS = "STATE_NUM_FRAGMENTS";
     private Toolbar mToolbar;
     private int mBackCount;
-    private boolean mInitialized;
     private FileTransferService mService;
     private TaskProgressDialogFragment mProgressDialogFragment;
 
@@ -49,6 +49,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     private ExplorerPagerAdapter mFragmentAdapter;
     private ViewPager mViewPager;
     private TabLayout mTabLayout;
+    private TabLayout.Tab mAddTab;
 
 
     @Override
@@ -79,13 +80,27 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         mTabLayout.setupWithViewPager(mViewPager);
         mTabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
 
-        Button addTabButton = (Button) findViewById(R.id.add_tab_button);
-        addTabButton.setOnClickListener(new View.OnClickListener() {
+        Button closeTabButton = (Button) findViewById(R.id.close_tab_button);
+        closeTabButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                addExplorerTab();
+                mFragmentAdapter.removeFragmentAt(mViewPager.getCurrentItem());
+                mTabLayout.setupWithViewPager(mViewPager);
+                addPlusTab();
             }
         });
+
+        if (savedInstanceState != null) {
+            int numFragments = savedInstanceState.getInt(STATE_NUM_FRAGMENTS);
+
+            for(int i = 0; i < numFragments; i++) {
+                addExplorerTab();
+            }
+        } else {
+            addExplorerTab();
+        }
+
+
 
         Log.d(TAG, "activity onCreate called");
     }
@@ -103,6 +118,23 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
         mFragmentAdapter.addFragment(fragmentEntry);
         mTabLayout.setupWithViewPager(mViewPager);
+
+        addPlusTab();
+    }
+
+    private void addPlusTab() {
+        TextView addTabLabel = new TextView(this);
+        addTabLabel.setText("+");
+        addTabLabel.setTextColor(getResources().getColor(R.color.colorAccent));
+        addTabLabel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mTabLayout.removeTabAt(mTabLayout.getChildCount() - 1);
+                addExplorerTab();
+            }
+        });
+
+        mTabLayout.addTab(mTabLayout.newTab().setCustomView(addTabLabel), false);
     }
 
     @Override
@@ -134,7 +166,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     @Override
     public void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
-        out.putBoolean(STATE_INITIALIZED, mInitialized);
+        out.putInt(STATE_NUM_FRAGMENTS, mFragmentAdapter.getCount());
         Log.d(TAG, "Saving state");
     }
 
@@ -255,15 +287,6 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         mService = transferService;
         mService.addTaskProgressListener(this);
         mService.setTaskErrorListener(this);
-//        ExplorerFragment explorerFragment = (ExplorerFragment)getSupportFragmentManager().findFragmentById(R.id.fragment);
-//        explorerFragment.setFileTransferService(transferService);
-//
-//        if (!mInitialized) {
-//            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-//                explorerFragment.setCurrentDirectory(Environment.getExternalStorageDirectory());
-//            }
-//            mInitialized = true;
-//        }
     }
 
     @Override
