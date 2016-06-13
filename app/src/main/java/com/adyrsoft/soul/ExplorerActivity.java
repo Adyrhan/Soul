@@ -5,7 +5,6 @@ import android.os.Environment;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -23,6 +22,7 @@ import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.service.ProgressInfo;
 import com.adyrsoft.soul.service.TaskResult;
+import com.adyrsoft.soul.ui.DynamicFragmentPagerAdapter;
 import com.adyrsoft.soul.ui.FileSystemErrorDialog;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
@@ -45,11 +45,13 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             mBackCount = 0;
         }
     };
+
     private FileSystemErrorDialog mErrorDialog;
     private ExplorerPagerAdapter mFragmentAdapter;
     private ViewPager mViewPager;
     private TabLayout mTabLayout;
     private TabLayout.Tab mAddTab;
+    private FragmentManager mFragmentManager;
 
 
     @Override
@@ -60,6 +62,8 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
+
+        mFragmentManager = getSupportFragmentManager();
 
         final DrawerLayout drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
 
@@ -84,9 +88,22 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         closeTabButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mFragmentAdapter.removeFragmentAt(mViewPager.getCurrentItem());
-                mTabLayout.setupWithViewPager(mViewPager);
-                addPlusTab();
+                if (mFragmentAdapter.getCount() > 1) {
+                    int deleteTargetItemIndex = mViewPager.getCurrentItem();
+                    int newCurrentItem;
+
+                    if (deleteTargetItemIndex + 1 < mFragmentAdapter.getCount()) {
+                        newCurrentItem = deleteTargetItemIndex + 1;
+                    } else {
+                        newCurrentItem = deleteTargetItemIndex - 1;
+                    }
+
+                    mViewPager.setCurrentItem(newCurrentItem);
+
+                    mFragmentAdapter.removeFragmentAt(deleteTargetItemIndex);
+                    mTabLayout.setupWithViewPager(mViewPager);
+                    addPlusTab();
+                }
             }
         });
 
@@ -99,8 +116,6 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         } else {
             addExplorerTab();
         }
-
-
 
         Log.d(TAG, "activity onCreate called");
     }
@@ -301,11 +316,25 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         }
     }
 
-    private class ExplorerPagerAdapter extends FragmentStatePagerAdapter{
+    private class ExplorerPagerAdapter extends DynamicFragmentPagerAdapter{
         private ArrayList<FragmentEntry> mFragmentEntries = new ArrayList<>();
 
         public ExplorerPagerAdapter(FragmentManager supportFragmentManager) {
             super(supportFragmentManager);
+        }
+
+        @Override
+        public int getItemPosition(Object object) {
+            int index = POSITION_NONE;
+
+            for (int i = 0; i < mFragmentEntries.size(); i++) {
+                FragmentEntry entry = mFragmentEntries.get(i);
+                if (entry.getFragment().equals(object)) {
+                    index = i;
+                }
+            }
+
+            return index;
         }
 
         @Override
@@ -320,6 +349,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
         @Override
         public int getCount() {
+            if (mFragmentEntries == null) return 0;
             return mFragmentEntries.size();
         }
 
@@ -329,14 +359,14 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         }
 
         public void removeFragment(FragmentEntry fragmentEntry) {
-            mFragmentEntries.remove(fragmentEntry);
-            notifyDataSetChanged();
+            removeFragmentAt(mFragmentEntries.indexOf(fragmentEntry));
         }
 
         public void removeFragmentAt(int position) {
             mFragmentEntries.remove(position);
             notifyDataSetChanged();
         }
+
     }
 
     private class FragmentEntry {
