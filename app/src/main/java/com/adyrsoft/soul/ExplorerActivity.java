@@ -10,9 +10,11 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -141,6 +143,9 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         TextView addTabLabel = new TextView(this);
         addTabLabel.setText("+");
         addTabLabel.setTextColor(getResources().getColor(R.color.colorAccent));
+        addTabLabel.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        addTabLabel.setGravity(Gravity.CENTER);
+
         addTabLabel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
