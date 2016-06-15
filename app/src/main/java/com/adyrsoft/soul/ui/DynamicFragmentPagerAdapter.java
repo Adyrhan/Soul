@@ -32,9 +32,6 @@ public abstract class DynamicFragmentPagerAdapter extends PagerAdapter {
         mFragmentManager = fm;
     }
 
-    /**
-     * Return the Fragment associated with a specified position.
-     */
     public abstract Fragment getItem(int position);
 
     @Override
@@ -67,11 +64,13 @@ public abstract class DynamicFragmentPagerAdapter extends PagerAdapter {
                 fragment.setInitialSavedState(fss);
             }
         }
+
         while (mFragments.size() <= position) {
             mFragments.add(null);
         }
+
         fragment.setMenuVisibility(false);
-        fragment.setUserVisibleHint(false);
+        //fragment.setUserVisibleHint(false);
         mFragments.set(position, fragment);
         mCurTransaction.add(container.getId(), fragment);
 
@@ -93,11 +92,26 @@ public abstract class DynamicFragmentPagerAdapter extends PagerAdapter {
 
         if (getItemPosition(object) != POSITION_NONE) {
             mSavedState.set(position, mFragmentManager.saveFragmentInstanceState(fragment));
+            mFragments.set(position, null);
         } else {
             mSavedState.set(position, null);
-        }
+            mFragments.set(position, null);
 
-        mFragments.set(position, null);
+            // Move fragments (and its states) to the left one position to the right
+            for(int i = position + 1; i < mFragments.size(); i++) {
+                mFragments.set(i - 1, mFragments.get(i));
+                if (i == mFragments.size() - 1) {
+                    mFragments.remove(i);
+                }
+            }
+
+            for(int i = position + 1; i < mSavedState.size(); i++) {
+                mSavedState.set(i - 1, mSavedState.get(i));
+                if (i == mSavedState.size() - 1) {
+                    mSavedState.remove(i);
+                }
+            }
+        }
 
         mCurTransaction.remove(fragment);
     }
@@ -108,11 +122,11 @@ public abstract class DynamicFragmentPagerAdapter extends PagerAdapter {
         if (fragment != mCurrentPrimaryItem) {
             if (mCurrentPrimaryItem != null) {
                 mCurrentPrimaryItem.setMenuVisibility(false);
-                mCurrentPrimaryItem.setUserVisibleHint(false);
+                //mCurrentPrimaryItem.setUserVisibleHint(false);
             }
             if (fragment != null) {
                 fragment.setMenuVisibility(true);
-                fragment.setUserVisibleHint(true);
+                //fragment.setUserVisibleHint(true);
             }
             mCurrentPrimaryItem = fragment;
         }
@@ -184,5 +198,19 @@ public abstract class DynamicFragmentPagerAdapter extends PagerAdapter {
                 }
             }
         }
+    }
+
+    @Override
+    public int getItemPosition(Object object) {
+        int index = POSITION_NONE;
+
+        for (int i = 0; i < getCount(); i++) {
+            Fragment entry = getItem(i);
+            if (entry.equals(object)) {
+                index = i;
+            }
+        }
+
+        return index;
     }
 }

@@ -329,20 +329,6 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         }
 
         @Override
-        public int getItemPosition(Object object) {
-            int index = POSITION_NONE;
-
-            for (int i = 0; i < mFragmentEntries.size(); i++) {
-                FragmentEntry entry = mFragmentEntries.get(i);
-                if (entry.getFragment().equals(object)) {
-                    index = i;
-                }
-            }
-
-            return index;
-        }
-
-        @Override
         public Fragment getItem(int position) {
             return mFragmentEntries.get(position).getFragment();
         }
