@@ -7,6 +7,7 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class FileTransferService extends Service implements TaskListener {
 
@@ -34,7 +36,7 @@ public class FileTransferService extends Service implements TaskListener {
         }
     }
 
-    private static final String TAG = FileTransferService.class.getName();
+    private static final String TAG = FileTransferService.class.getSimpleName();
     private final IBinder mBinder = new FileTransferBinder();
 
     private boolean mReportingErrors;
@@ -44,6 +46,29 @@ public class FileTransferService extends Service implements TaskListener {
     private ArrayList<TaskProgressListener> mClientListeners = new ArrayList<>();
     private HashMap<FileSystemTask,ProgressInfo> mTaskStatusCache = new HashMap<>();
     private LinkedList<ErrorInfo> mTaskErrorQueue = new LinkedList<>();
+    private ProgressNotifier mProgressNotifier;
+
+    private TaskListener mTaskEventHub = new TaskListener() {
+        @Override
+        public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
+            mProgressNotifier.onProgressUpdate(task, info);
+        }
+
+        @Override
+        public void onTaskFinished(FileSystemTask task, TaskResult result) {
+            mProgressNotifier.onTaskFinished(task, result);
+        }
+
+        @Override
+        public void onError(final FileSystemTask task, final ErrorInfo errorInfo) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    FileTransferService.this.onError(task, errorInfo);
+                }
+            });
+        }
+    };
 
     @Override
     public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
@@ -98,24 +123,40 @@ public class FileTransferService extends Service implements TaskListener {
 
     @Override
     public void onCreate() {
+        Log.d(TAG, "Service starting up");
         mHandler = new Handler();
+        mProgressNotifier = new ProgressNotifier(mHandler, this);
+        mProgressNotifier.start();
         mExecutor = Executors.newCachedThreadPool();
     }
 
+    @Override
+    public void onDestroy() {
+        try {
+            Log.d(TAG, "Service shutting down");
+            mExecutor.shutdownNow();
+            mProgressNotifier.stop();
+            mExecutor.awaitTermination(2, TimeUnit.SECONDS);
+            mProgressNotifier.awaitTermination(2, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     public FileSystemTask copy(Uri srcWD, List<Uri> srcs, Uri dest) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.COPY, srcWD, srcs, dest, this, mHandler);
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.COPY, srcWD, srcs, dest, mTaskEventHub);
         addToQueue(task);
         return task;
     }
 
     public FileSystemTask move(Uri srcWD, List<Uri> srcs, Uri dest) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.MOVE, srcWD, srcs, dest, this, mHandler);
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.MOVE, srcWD, srcs, dest, mTaskEventHub);
         addToQueue(task);
         return task;
     }
 
     public FileSystemTask remove(Uri srcWD, List<Uri> srcs) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.REMOVE, srcWD, srcs, null, this, mHandler);
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.REMOVE, srcWD, srcs, null, mTaskEventHub);
         addToQueue(task);
         return task;
     }

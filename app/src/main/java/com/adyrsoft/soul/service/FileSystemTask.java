@@ -15,7 +15,12 @@ import java.util.concurrent.Future;
  * appropriate protocol or local file system, which will be run by the FileTransferService.
  */
 public abstract class FileSystemTask implements Runnable {
-    private Handler mUiHandler;
+    public enum State {
+        PENDING,
+        WORKING,
+        FINISHED
+    }
+
     private FileOperation mOp;
     private Uri mSrcWD;
     private List<Uri> mSrcs;
@@ -30,16 +35,17 @@ public abstract class FileSystemTask implements Runnable {
     private Uri mSource;
     private Uri mDest;
     private TaskResult mTaskResult;
+    private State mState;
 
-    public FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler) {
-        init(op, srcWD, srcs, dst, listener, uiHandler, null);
+    public FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener) {
+        init(op, srcWD, srcs, dst, listener, null);
     }
 
-    FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler, StreamDuplicator duplicator) {
-        init(op, srcWD, srcs, dst, listener, uiHandler, duplicator);
+    FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, StreamDuplicator duplicator) {
+        init(op, srcWD, srcs, dst, listener, duplicator);
     }
 
-    private void init(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler, StreamDuplicator duplicator) {
+    private void init(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, StreamDuplicator duplicator) {
         if (srcs == null) {
             throw new NullPointerException("srcs cannot be null");
         }
@@ -50,10 +56,6 @@ public abstract class FileSystemTask implements Runnable {
 
         if ((op == FileOperation.COPY || op == FileOperation.MOVE) && dst == null) {
             throw new NullPointerException("dst cannot be null for copy and move operations");
-        }
-
-        if (uiHandler == null) {
-            throw new NullPointerException("uiHandler cannot be null");
         }
 
         if (srcWD == null) {
@@ -69,8 +71,8 @@ public abstract class FileSystemTask implements Runnable {
         mSrcs = srcs;
         mDst = dst;
         mListener = listener;
-        mUiHandler = uiHandler;
         mStreamDuplicator = duplicator;
+        mState = State.PENDING;
     }
 
     public StreamDuplicator getStreamDuplicator() {
@@ -80,6 +82,7 @@ public abstract class FileSystemTask implements Runnable {
     @Override
     public void run() {
         try {
+            mState = State.WORKING;
             switch (mOp) {
                 case COPY:
                     copy(mSrcWD, mSrcs, mDst);
@@ -109,6 +112,8 @@ public abstract class FileSystemTask implements Runnable {
 
     public FileOperation getFileOperation() { return mOp; }
 
+    public State getState() { return mState; }
+
     protected void onProgressUpdate() {
         final ProgressInfo info = new ProgressInfo.Builder()
                 .setSource(getSource())
@@ -120,28 +125,17 @@ public abstract class FileSystemTask implements Runnable {
                 .create();
 
         final FileSystemTask thisTask = this;
-        mUiHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mListener != null) {
-                    mListener.onProgressUpdate(thisTask, info);
-                }
-            }
-        });
+        if (mListener != null) {
+            mListener.onProgressUpdate(thisTask, info);
+        }
     }
 
     protected void onTaskFinished() {
-        final TaskResult result = mTaskResult;
-        final FileSystemTask thisTask = this;
+        mState = State.FINISHED;
 
-        mUiHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mListener != null) {
-                    mListener.onTaskFinished(thisTask, result);
-                }
-            }
-        });
+        if (mListener != null) {
+            mListener.onTaskFinished(this, mTaskResult);
+        }
     }
 
     protected Solution onError(final Uri src, final Uri dst, final FileSystemErrorType errorType) throws InterruptedException {
@@ -155,15 +149,9 @@ public abstract class FileSystemTask implements Runnable {
                 .setFeedbackProvider(feedbackProvider)
                 .create();
 
-        mUiHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mListener != null) {
-                    mListener.onError(thisTask, errorInfo);
-                }
-            }
-        });
-
+        if (mListener != null) {
+            mListener.onError(thisTask, errorInfo);
+        }
         return feedbackProvider.fetchFeedback();
     }
 

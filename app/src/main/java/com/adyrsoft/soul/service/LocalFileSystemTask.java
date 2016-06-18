@@ -27,8 +27,8 @@ import java.util.List;
 public class LocalFileSystemTask extends FileSystemTask {
     public static final String TAG = LocalFileSystemTask.class.getName();
 
-    public LocalFileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, Handler uiHandler) {
-        super(op, srcWD, srcs, dst, listener, uiHandler);
+    public LocalFileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener) {
+        super(op, srcWD, srcs, dst, listener);
     }
 
     @Override

@@ -37,6 +37,7 @@ public class ProgressInfo {
         return mSource;
     }
 
+
     public ProgressInfo(ProgressInfo progressInfo) {
         mSource = progressInfo.mSource;
         mDest = progressInfo.mDest;
@@ -54,8 +55,6 @@ public class ProgressInfo {
         mProcessedFiles = builder.getProcessedFiles();
         mProcessedBytes = builder.getProcessedBytes();
     }
-
-
 
     public static class Builder {
         private Uri mSource;

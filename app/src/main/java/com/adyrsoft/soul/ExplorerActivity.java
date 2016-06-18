@@ -2,6 +2,7 @@ package com.adyrsoft.soul;
 
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -24,6 +25,7 @@ import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.service.ProgressInfo;
 import com.adyrsoft.soul.service.TaskResult;
+import com.adyrsoft.soul.ui.BackgroundTasksFragment;
 import com.adyrsoft.soul.ui.DynamicFragmentPagerAdapter;
 import com.adyrsoft.soul.ui.FileSystemErrorDialog;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
@@ -54,6 +56,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     private TabLayout mTabLayout;
     private TabLayout.Tab mAddTab;
     private FragmentManager mFragmentManager;
+    private Handler mHandler;
 
 
     @Override
@@ -61,6 +64,8 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_explorer);
+
+        mHandler = new Handler();
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
@@ -73,6 +78,20 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         backgroundTasksButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                int position = mFragmentAdapter.getFirstPositionForClass(BackgroundTasksFragment.class);
+
+                if (position == ExplorerPagerAdapter.NOT_FOUND) {
+                    FragmentEntry entry = new FragmentEntry();
+                    entry.setFragment(new BackgroundTasksFragment());
+                    entry.setTitle("Tasks");
+                    mFragmentAdapter.addFragment(entry);
+                    mTabLayout.setupWithViewPager(mViewPager);
+                    addPlusTab();
+                    mViewPager.setCurrentItem(mFragmentAdapter.getCount()-1);
+                } else {
+                    mViewPager.setCurrentItem(position);
+                }
+
                 drawerLayout.closeDrawers();
             }
         });
@@ -105,6 +124,9 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
                     mFragmentAdapter.removeFragmentAt(deleteTargetItemIndex);
                     mTabLayout.setupWithViewPager(mViewPager);
                     addPlusTab();
+
+                    int finalCurrentItem = Math.min(deleteTargetItemIndex, newCurrentItem);
+                    mViewPager.setCurrentItem(finalCurrentItem);
                 }
             }
         });
@@ -192,29 +214,29 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
     @Override
     public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
-        if (mProgressDialogFragment == null) {
-            mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
-
-            if (mProgressDialogFragment == null) {
-                Log.d(TAG, "Showing progress dialog");
-                mProgressDialogFragment = new TaskProgressDialogFragment();
-                mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
-            }
-        }
-
-        int totalFiles = info.getTotalFiles();
-        int processedFiles = info.getProcessedFiles();
-
-        mProgressDialogFragment.setMax(totalFiles);
-        mProgressDialogFragment.setProgress(processedFiles);
-
-        if (totalFiles == processedFiles && totalFiles != 0) {
-            ExplorerFragment explorerFragment = (ExplorerFragment) mFragmentAdapter.getItem(mViewPager.getCurrentItem());
-            explorerFragment.refresh();
-
-            mProgressDialogFragment.dismiss();
-            mProgressDialogFragment = null;
-        }
+//        if (mProgressDialogFragment == null) {
+//            mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
+//
+//            if (mProgressDialogFragment == null) {
+//                Log.d(TAG, "Showing progress dialog");
+//                mProgressDialogFragment = new TaskProgressDialogFragment();
+//                mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+//            }
+//        }
+//
+//        int totalFiles = info.getTotalFiles();
+//        int processedFiles = info.getProcessedFiles();
+//
+//        mProgressDialogFragment.setMax(totalFiles);
+//        mProgressDialogFragment.setProgress(processedFiles);
+//
+//        if (totalFiles == processedFiles && totalFiles != 0) {
+//            ExplorerFragment explorerFragment = (ExplorerFragment) mFragmentAdapter.getItem(mViewPager.getCurrentItem());
+//            explorerFragment.refresh();
+//
+//            mProgressDialogFragment.dismiss();
+//            mProgressDialogFragment = null;
+//        }
     }
 
     @Override
@@ -322,6 +344,9 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     }
 
     private class ExplorerPagerAdapter extends DynamicFragmentPagerAdapter{
+        // Value returned by getFirstPositionForClass in case there isn't such a fragment of the class given
+        public static final int NOT_FOUND = -1;
+
         private ArrayList<FragmentEntry> mFragmentEntries = new ArrayList<>();
 
         public ExplorerPagerAdapter(FragmentManager supportFragmentManager) {
@@ -358,6 +383,16 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             notifyDataSetChanged();
         }
 
+        public int getFirstPositionForClass(Class<? extends Fragment> cls) {
+            for(int i = 0; i < mFragmentEntries.size(); i++) {
+                Fragment fragment = mFragmentEntries.get(i).getFragment();
+                if (fragment.getClass().equals(cls)) {
+                    return i;
+                }
+            }
+
+            return NOT_FOUND;
+        }
     }
 
     private class FragmentEntry {

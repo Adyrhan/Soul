@@ -66,6 +66,7 @@
         android:layout_height="match_parent"
         android:id="@+id/drawerMenuLayout"
         android:background="#fff"
+        android:clickable="true"
         android:layout_gravity="start">
 
         <Button
