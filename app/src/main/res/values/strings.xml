@@ -20,4 +20,5 @@
     <string name="remote_host_auth_error_desc">Remote host authentication error</string>
     <string name="overwrite_button_label">Overwrite</string>
     <string name="keep_button_label">Keep</string>
+    <string name="menu_item_remove">Remove</string>
 </resources>

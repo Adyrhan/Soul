@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -207,6 +208,14 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             case R.id.paste:
                 mService.copy(mSrcWD, mToCopy, Uri.fromFile(mCurrentDir));
                 return true;
+
+            case R.id.remove:
+                ArrayList<Uri> toRemove = new ArrayList<>();
+                for (File fileEntry : mSelectedFileSet) {
+                    toRemove.add(Uri.fromFile(fileEntry));
+                }
+
+                mService.remove(Uri.fromFile(mCurrentDir), toRemove);
 
             default:
                 return super.onOptionsItemSelected(item);

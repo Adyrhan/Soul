@@ -96,7 +96,9 @@ public class BackgroundTasksFragment extends Fragment implements RequestFileTran
         if (mTransferService != null) {
             mTransferService.removeTaskProgressListener(this);
         }
+
         mAdapter.unregisterAdapterDataObserver(mDataObserver);
+        mAdapter.clear();
     }
 
     @Override
