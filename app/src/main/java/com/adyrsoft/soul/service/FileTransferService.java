@@ -144,19 +144,19 @@ public class FileTransferService extends Service implements TaskListener {
     }
 
     public FileSystemTask copy(Uri srcWD, List<Uri> srcs, Uri dest) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.COPY, srcWD, srcs, dest, mTaskEventHub);
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.COPY, srcWD, new ArrayList<>(srcs), dest, mTaskEventHub);
         addToQueue(task);
         return task;
     }
 
     public FileSystemTask move(Uri srcWD, List<Uri> srcs, Uri dest) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.MOVE, srcWD, srcs, dest, mTaskEventHub);
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.MOVE, srcWD, new ArrayList<>(srcs), dest, mTaskEventHub);
         addToQueue(task);
         return task;
     }
 
     public FileSystemTask remove(Uri srcWD, List<Uri> srcs) {
-        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.REMOVE, srcWD, srcs, null, mTaskEventHub);
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.REMOVE, srcWD, new ArrayList<>(srcs), null, mTaskEventHub);
         addToQueue(task);
         return task;
     }
