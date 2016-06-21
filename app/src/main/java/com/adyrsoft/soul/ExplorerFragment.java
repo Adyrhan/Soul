@@ -7,6 +7,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.FileObserver;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
@@ -55,7 +57,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     public static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
 
     private static final String EXPLORER_STATE = "EXPLORER_STATE";
-    private static final String TAG = ExplorerFragment.class.getName();
+    private static final String TAG = ExplorerFragment.class.getSimpleName();
     private static final String DIRECTORY_FILES = "DIRECTORY_FILES";
     private static final String SELECTED_FILES = "SELECTED_FILES";
 
@@ -69,8 +71,8 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private FileTransferService mService;
     private Menu mMenu;
     private TaskProgressDialogFragment mProgressDialogFragment;
-    public List<Uri> mToCopy = new ArrayList<>();
-
+    private List<Uri> mToCopy = new ArrayList<>();
+    private ExplorerFileObserver mFileObserver;
 
     public ExplorerFragment() {
     }
@@ -132,6 +134,15 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             if (mCurrentDir != null) {
                 setCurrentDirectory(mCurrentDir);
             }
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (mFileObserver != null) {
+            mFileObserver.stopWatching();
+            mFileObserver = null;
         }
     }
 
@@ -198,15 +209,15 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 }
 
                 mSrcWD = Uri.fromFile(mCurrentDir);
-
                 stateChange(ExplorerState.NAVIGATION);
-
-                Toast.makeText(getActivity(), "Selected to copy " + mToCopy.size() + " files", Toast.LENGTH_SHORT).show();
-
+                Toast.makeText(getActivity(), "You selected to copy " + mToCopy.size() + " files", Toast.LENGTH_SHORT).show();
                 return true;
 
             case R.id.paste:
                 mService.copy(mSrcWD, mToCopy, Uri.fromFile(mCurrentDir));
+                mSelectedFileSet.clear();
+                mSrcWD = null;
+                mToCopy.clear();
                 return true;
 
             case R.id.remove:
@@ -216,6 +227,8 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 }
 
                 mService.remove(Uri.fromFile(mCurrentDir), toRemove);
+                mSelectedFileSet.clear();
+                stateChange(ExplorerState.NAVIGATION);
 
             default:
                 return super.onOptionsItemSelected(item);
@@ -298,10 +311,14 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             throw new IllegalArgumentException(dir.getPath() + " is not a directory");
         }
 
+        if (mFileObserver != null) {
+            mFileObserver.stopWatching();
+        }
+        mFileObserver = new ExplorerFileObserver(dir.getPath());
+        mFileObserver.startWatching();
+
         mCurrentDir = dir;
-
         refresh();
-
         mPathView.setCurrentDirectory(dir);
     }
 
@@ -469,6 +486,24 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 Toast.makeText(getActivity(), "There isn't an app installed that can handle this file type", Toast.LENGTH_LONG).show();
             }
 
+        }
+    }
+
+    public class ExplorerFileObserver extends FileObserver {
+        private Handler mUIHandler = new Handler();
+
+        public ExplorerFileObserver(String path) {
+            super(path, CREATE | DELETE | MOVED_FROM | MOVED_TO);
+        }
+
+        @Override
+        public void onEvent(int event, String path) {
+            mUIHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    refresh();
+                }
+            });
         }
     }
 
