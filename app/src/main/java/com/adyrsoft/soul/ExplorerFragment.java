@@ -1,5 +1,6 @@
 package com.adyrsoft.soul;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -27,6 +28,7 @@ import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.Toast;
 
+import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.ui.DirectoryPathView;
 import com.adyrsoft.soul.ui.FileGridItemView;
@@ -54,6 +56,10 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         UNREADY
     }
 
+    public interface OnNewTaskCallback {
+        void OnNewTaskCreated(FileSystemTask mFileSystemTask);
+    }
+
     public static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
 
     private static final String EXPLORER_STATE = "EXPLORER_STATE";
@@ -73,8 +79,18 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private TaskProgressDialogFragment mProgressDialogFragment;
     private List<Uri> mToCopy = new ArrayList<>();
     private ExplorerFileObserver mFileObserver;
+    private OnNewTaskCallback mOnNewTaskCallback;
 
     public ExplorerFragment() {
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
+        if (context instanceof OnNewTaskCallback) {
+            mOnNewTaskCallback = (OnNewTaskCallback)context;
+        }
     }
 
     @Override
@@ -240,16 +256,24 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             toRemove.add(Uri.fromFile(fileEntry));
         }
 
-        mService.remove(Uri.fromFile(mCurrentDir), toRemove);
+        FileSystemTask newTask = mService.remove(Uri.fromFile(mCurrentDir), toRemove);
         mSelectedFileSet.clear();
         stateChange(ExplorerState.NAVIGATION);
+
+        if(mOnNewTaskCallback != null) {
+            mOnNewTaskCallback.OnNewTaskCreated(newTask);
+        }
     }
 
     private void startCopy() {
-        mService.copy(mSrcWD, mToCopy, Uri.fromFile(mCurrentDir));
+        FileSystemTask newTask = mService.copy(mSrcWD, mToCopy, Uri.fromFile(mCurrentDir));
         mSelectedFileSet.clear();
         mSrcWD = null;
         mToCopy.clear();
+
+        if(mOnNewTaskCallback != null) {
+            mOnNewTaskCallback.OnNewTaskCreated(newTask);
+        }
     }
 
     // TODO: Replace implementation of createFolder with one that uses the FileTransferService

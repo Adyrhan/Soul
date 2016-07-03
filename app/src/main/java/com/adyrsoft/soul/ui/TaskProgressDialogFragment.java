@@ -1,6 +1,7 @@
 package com.adyrsoft.soul.ui;
 
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.support.v4.app.DialogFragment;
 import android.app.ProgressDialog;
 import android.os.Bundle;
@@ -14,6 +15,7 @@ public class TaskProgressDialogFragment extends DialogFragment {
     private ProgressDialog mDialog;
     private int mMaxProgress;
     private int mProgress;
+    private DialogInterface.OnClickListener mOnHideClickListener;
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -31,7 +33,15 @@ public class TaskProgressDialogFragment extends DialogFragment {
         mDialog.setCancelable(false);
         mDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         mDialog.setMax(mMaxProgress);
-
+        mDialog.setButton(Dialog.BUTTON_NEUTRAL, "Hide", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if (mOnHideClickListener != null) {
+                    mOnHideClickListener.onClick(dialog, which);
+                    dialog.dismiss();
+                }
+            }
+        });
         return mDialog;
     }
 
@@ -60,5 +70,9 @@ public class TaskProgressDialogFragment extends DialogFragment {
         if (mDialog != null) {
             mDialog.setProgress(progress);
         }
+    }
+
+    public void setOnHideButtonClick(DialogInterface.OnClickListener onClickListener) {
+        mOnHideClickListener = onClickListener;
     }
 }

@@ -1,5 +1,6 @@
 package com.adyrsoft.soul;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -33,7 +34,7 @@ import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class ExplorerActivity extends AppCompatActivity implements RequestFileTransferServiceCallback, FileTransferService.TaskProgressListener, FileTransferService.TaskErrorListener {
+public class ExplorerActivity extends AppCompatActivity implements ExplorerFragment.OnNewTaskCallback, RequestFileTransferServiceCallback, FileTransferService.TaskProgressListener, FileTransferService.TaskErrorListener {
     public static final int BACK_PRESS_DELAY_MILLIS = 2000;
     private static final String TAG = ExplorerActivity.class.getName();
     private static final String TAG_PROGRESS_DIALOG_FRAGMENT = "progressdialog";
@@ -57,6 +58,8 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
     private TabLayout.Tab mAddTab;
     private FragmentManager mFragmentManager;
     private Handler mHandler;
+    private boolean mProgressDialogOpen;
+    private FileSystemTask mProgressDialogTarget;
 
 
     @Override
@@ -192,10 +195,7 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
             mService.setTaskErrorListener(null);
         }
 
-        if (mProgressDialogFragment != null) {
-            mProgressDialogFragment.dismiss();
-            mProgressDialogFragment = null;
-        }
+        dismissProgressDialog();
 
         if (mErrorDialog != null) {
             mErrorDialog.dismiss();
@@ -214,33 +214,39 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
 
     @Override
     public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
-//        if (mProgressDialogFragment == null) {
-//            mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
-//
-//            if (mProgressDialogFragment == null) {
-//                Log.d(TAG, "Showing progress dialog");
-//                mProgressDialogFragment = new TaskProgressDialogFragment();
-//                mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
-//            }
-//        }
-//
-//        int totalFiles = info.getTotalFiles();
-//        int processedFiles = info.getProcessedFiles();
-//
-//        mProgressDialogFragment.setMax(totalFiles);
-//        mProgressDialogFragment.setProgress(processedFiles);
-//
-//        if (totalFiles == processedFiles && totalFiles != 0) {
-//            ExplorerFragment explorerFragment = (ExplorerFragment) mFragmentAdapter.getItem(mViewPager.getCurrentItem());
-//            explorerFragment.refresh();
-//
-//            mProgressDialogFragment.dismiss();
-//            mProgressDialogFragment = null;
-//        }
+        if (!mProgressDialogOpen) return;
+
+        if (mProgressDialogFragment == null) {
+            mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
+
+            if (mProgressDialogFragment == null) {
+                Log.d(TAG, "Showing progress dialog");
+                mProgressDialogFragment = new TaskProgressDialogFragment();
+                mProgressDialogFragment.setOnHideButtonClick(new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dismissProgressDialog();
+                    }
+                });
+                mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+            }
+        }
+
+        if (mProgressDialogTarget == task) {
+            int totalFiles = info.getTotalFiles();
+            int processedFiles = info.getProcessedFiles();
+
+            mProgressDialogFragment.setMax(totalFiles);
+            mProgressDialogFragment.setProgress(processedFiles);
+        }
     }
 
     @Override
     public void onTaskFinished(FileSystemTask task, TaskResult result) {
+        dismissProgressDialog();
+    }
+
+    private void dismissProgressDialog() {
         if (mProgressDialogFragment != null) {
             mProgressDialogFragment.dismiss();
             mProgressDialogFragment = null;
@@ -341,6 +347,12 @@ public class ExplorerActivity extends AppCompatActivity implements RequestFileTr
         for(FileSystemTask task : pendingTasks.keySet()) {
             onProgressUpdate(task, pendingTasks.get(task));
         }
+    }
+
+    @Override
+    public void OnNewTaskCreated(FileSystemTask mFileSystemTask) {
+        mProgressDialogOpen = true;
+        mProgressDialogTarget = mFileSystemTask;
     }
 
     private class ExplorerPagerAdapter extends DynamicFragmentPagerAdapter{
