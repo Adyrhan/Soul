@@ -21,6 +21,10 @@ import com.adyrsoft.soul.service.UserFeedbackProvider;
  * Error dialog meant to be used in case of a recoverable error happening while processing a FileSystemTask
  */
 public class FileSystemErrorDialog extends DialogFragment {
+    public interface OnFeedbackProvidedCallback {
+        void onFeedbackProvided();
+    }
+
     private View mRootView;
     private Uri mAffectedFile;
     private String mErrorDescription;
@@ -31,6 +35,7 @@ public class FileSystemErrorDialog extends DialogFragment {
     private String mRetryButtonLabel;
     private String mIgnoreButtonLabel;
     private String mCancelButtonLabel;
+    private OnFeedbackProvidedCallback mFeedbackProvidedCallback;
 
     public FileSystemErrorDialog() {
     }
@@ -41,8 +46,6 @@ public class FileSystemErrorDialog extends DialogFragment {
         if (mFeedbackProvider == null) {
             throw new IllegalStateException("An UserFeedbackProvider object must be set before showing this dialog");
         }
-
-        //setStyle(DialogFragment.STYLE_NORMAL, 0);
 
         setCancelable(false);
 
@@ -110,6 +113,9 @@ public class FileSystemErrorDialog extends DialogFragment {
                 }
 
                 sendFeedback();
+                if (mFeedbackProvidedCallback != null) {
+                    mFeedbackProvidedCallback.onFeedbackProvided();
+                }
                 dismiss();
             }
         });
@@ -129,6 +135,10 @@ public class FileSystemErrorDialog extends DialogFragment {
 
     public void setUserFeedbackProvider(UserFeedbackProvider provider) {
         mFeedbackProvider = provider;
+    }
+
+    public void setOnFeedbackProvidedCallback(OnFeedbackProvidedCallback callback) {
+        mFeedbackProvidedCallback = callback;
     }
 
     public void setErrorDescription(String msg) {

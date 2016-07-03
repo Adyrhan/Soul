@@ -58,8 +58,9 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
     private TabLayout.Tab mAddTab;
     private FragmentManager mFragmentManager;
     private Handler mHandler;
-    private boolean mProgressDialogOpen;
+    private boolean mReportProgress;
     private FileSystemTask mProgressDialogTarget;
+    private boolean mErrorReported;
 
 
     @Override
@@ -195,7 +196,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
             mService.setTaskErrorListener(null);
         }
 
-        dismissProgressDialog();
+        releaseProgressDialog();
 
         if (mErrorDialog != null) {
             mErrorDialog.dismiss();
@@ -214,7 +215,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
     @Override
     public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
-        if (!mProgressDialogOpen) return;
+        if (!mReportProgress) return;
 
         if (mProgressDialogFragment == null) {
             mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
@@ -225,10 +226,14 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
                 mProgressDialogFragment.setOnHideButtonClick(new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        dismissProgressDialog();
+                        releaseProgressDialog();
                     }
                 });
-                mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+
+                if (!mErrorReported) {
+                    mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+                    mFragmentManager.executePendingTransactions();
+                }
             }
         }
 
@@ -243,10 +248,10 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
     @Override
     public void onTaskFinished(FileSystemTask task, TaskResult result) {
-        dismissProgressDialog();
+        releaseProgressDialog();
     }
 
-    private void dismissProgressDialog() {
+    private void releaseProgressDialog() {
         if (mProgressDialogFragment != null) {
             mProgressDialogFragment.dismiss();
             mProgressDialogFragment = null;
@@ -255,8 +260,25 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
     @Override
     public void onError(FileSystemTask task, ErrorInfo errorInfo) {
+        mErrorReported = true;
+
+        if (mProgressDialogFragment != null && mProgressDialogFragment.isAdded()) {
+            mProgressDialogFragment.dismiss();
+            mFragmentManager.executePendingTransactions();
+        }
+
         mErrorDialog = new FileSystemErrorDialog();
         mErrorDialog.setUserFeedbackProvider(errorInfo.getFeedbackProvider());
+        mErrorDialog.setOnFeedbackProvidedCallback(new FileSystemErrorDialog.OnFeedbackProvidedCallback() {
+            @Override
+            public void onFeedbackProvided() {
+                if (mReportProgress) {
+                    mErrorReported = false;
+                    mProgressDialogFragment.show(getSupportFragmentManager(), TAG_PROGRESS_DIALOG_FRAGMENT);
+                    mFragmentManager.executePendingTransactions();
+                }
+            }
+        });
 
         switch(errorInfo.getErrorType()) {
             case DEST_ALREADY_EXISTS:
@@ -293,6 +315,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
         Log.d(TAG, "Showing error dialog");
         mErrorDialog.show(getSupportFragmentManager(), "errordialog");
+        mFragmentManager.executePendingTransactions();
     }
 
     @Override
@@ -351,7 +374,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
     @Override
     public void OnNewTaskCreated(FileSystemTask mFileSystemTask) {
-        mProgressDialogOpen = true;
+        mReportProgress = true;
         mProgressDialogTarget = mFileSystemTask;
     }
 
