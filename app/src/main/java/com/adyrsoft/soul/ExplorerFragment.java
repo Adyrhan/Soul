@@ -169,66 +169,19 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     public boolean onOptionsItemSelected(MenuItem item) {
         switch(item.getItemId()) {
             case R.id.create_folder:
-                final EditText folderNameET = new EditText(getActivity());
-                folderNameET.setSingleLine(true);
-
-                final InputMethodManager imm =
-                        (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-
-                AlertDialog newFolderDialog = new AlertDialog.Builder(getActivity())
-                        .setTitle("Create new folder")
-                        .setMessage("Name your new folder")
-                        .setView(folderNameET)
-                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                String folderName = folderNameET.getText().toString();
-                                createFolder(folderName);
-                                imm.hideSoftInputFromWindow(folderNameET.getWindowToken(), 0);
-                            }
-                        })
-                        .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                imm.hideSoftInputFromWindow(folderNameET.getWindowToken(), 0);
-                            }
-                        }).create();
-
-                newFolderDialog.show();
-
-                folderNameET.requestFocus();
-
-                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
-
+                showCreateFolderDialog();
                 return true;
             case R.id.copy:
-                mToCopy.clear();
-
-                for(File file : mSelectedFileSet) {
-                    mToCopy.add(Uri.fromFile(file));
-                }
-
-                mSrcWD = Uri.fromFile(mCurrentDir);
-                stateChange(ExplorerState.NAVIGATION);
-                Toast.makeText(getActivity(), "You selected to copy " + mToCopy.size() + " files", Toast.LENGTH_SHORT).show();
+                prepareCopy();
                 return true;
 
             case R.id.paste:
-                mService.copy(mSrcWD, mToCopy, Uri.fromFile(mCurrentDir));
-                mSelectedFileSet.clear();
-                mSrcWD = null;
-                mToCopy.clear();
+                startCopy();
                 return true;
 
             case R.id.remove:
-                ArrayList<Uri> toRemove = new ArrayList<>();
-                for (File fileEntry : mSelectedFileSet) {
-                    toRemove.add(Uri.fromFile(fileEntry));
-                }
-
-                mService.remove(Uri.fromFile(mCurrentDir), toRemove);
-                mSelectedFileSet.clear();
-                stateChange(ExplorerState.NAVIGATION);
+                startRemove();
+                return true;
 
             default:
                 return super.onOptionsItemSelected(item);
@@ -236,6 +189,70 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
     }
 
+    private void showCreateFolderDialog() {
+        final EditText folderNameET = new EditText(getActivity());
+        folderNameET.setSingleLine(true);
+
+        final InputMethodManager imm =
+                (InputMethodManager)getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        AlertDialog newFolderDialog = new AlertDialog.Builder(getActivity())
+                .setTitle("Create new folder")
+                .setMessage("Name your new folder")
+                .setView(folderNameET)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String folderName = folderNameET.getText().toString();
+                        createFolder(folderName);
+                        imm.hideSoftInputFromWindow(folderNameET.getWindowToken(), 0);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        imm.hideSoftInputFromWindow(folderNameET.getWindowToken(), 0);
+                    }
+                }).create();
+
+        newFolderDialog.show();
+
+        folderNameET.requestFocus();
+
+        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+    }
+
+    private void prepareCopy() {
+        mToCopy.clear();
+
+        for(File file : mSelectedFileSet) {
+            mToCopy.add(Uri.fromFile(file));
+        }
+
+        mSrcWD = Uri.fromFile(mCurrentDir);
+        stateChange(ExplorerState.NAVIGATION);
+        Toast.makeText(getActivity(), "You selected to copy " + mToCopy.size() + " files", Toast.LENGTH_SHORT).show();
+    }
+
+    private void startRemove() {
+        ArrayList<Uri> toRemove = new ArrayList<>();
+        for (File fileEntry : mSelectedFileSet) {
+            toRemove.add(Uri.fromFile(fileEntry));
+        }
+
+        mService.remove(Uri.fromFile(mCurrentDir), toRemove);
+        mSelectedFileSet.clear();
+        stateChange(ExplorerState.NAVIGATION);
+    }
+
+    private void startCopy() {
+        mService.copy(mSrcWD, mToCopy, Uri.fromFile(mCurrentDir));
+        mSelectedFileSet.clear();
+        mSrcWD = null;
+        mToCopy.clear();
+    }
+
+    // TODO: Replace implementation of createFolder with one that uses the FileTransferService
     private void createFolder(String folderName) {
         File newFolder = new File(mCurrentDir, folderName);
         if (newFolder.exists()) {
