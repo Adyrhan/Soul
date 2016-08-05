@@ -1,6 +1,7 @@
 package com.adyrsoft.soul;
 
 import android.content.DialogInterface;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -21,6 +22,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.adyrsoft.soul.data.Entry;
 import com.adyrsoft.soul.service.ErrorInfo;
 import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.FileTransferService;
@@ -150,7 +152,8 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
     private void addExplorerTab() {
         Bundle explorerBundle = new Bundle();
-        explorerBundle.putString(ExplorerFragment.DIRECTORY_PARENT, Environment.getExternalStorageDirectory().getPath());
+        Entry localEntry = new Entry(Uri.fromFile(Environment.getExternalStorageDirectory()), Entry.EntryType.CONTAINER);
+        explorerBundle.putParcelable(ExplorerFragment.DIRECTORY_PARENT, localEntry);
 
         ExplorerFragment explorerFragment = new ExplorerFragment();
         explorerFragment.setArguments(explorerBundle);

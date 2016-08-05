@@ -5,6 +5,7 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -18,6 +19,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.adyrsoft.soul.R;
+import com.adyrsoft.soul.data.Entry;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -30,7 +32,7 @@ import java.util.List;
 public class DirectoryPathView extends FrameLayout {
 
     public interface OnPathSegmentSelectedListener {
-        void OnPathSegmentSelected(DirectoryPathView pathView, View segmentView, File path);
+        void OnPathSegmentSelected(DirectoryPathView pathView, View segmentView, Entry path);
     }
 
     private Context mContext;
@@ -82,13 +84,31 @@ public class DirectoryPathView extends FrameLayout {
         mScrollView = (HorizontalScrollView)findViewById(R.id.scroll);
 
         if (isInEditMode()) {
-            setCurrentDirectory(new File("/foo/bar/lorem/ipsum"));
+            setCurrentDirectory(new Entry(Uri.parse("/foo/bar/lorem/ipsum"), Entry.EntryType.CONTAINER));
         }
     }
 
-    private List<View> buildViewList(File path) {
+    private List<View> buildViewList(Entry path) {
         if (path != null) {
-            List<View> views = buildViewList(path.getParentFile());
+            Uri pathUri = path.getUri();
+            File parentFile = new File(pathUri.getPath()).getParentFile();
+
+            List<View> views = null;
+
+            if (parentFile == null) {
+                views = buildViewList(null);
+            } else {
+                Uri parentUri = new Uri.Builder()
+                        .scheme(pathUri.getScheme())
+                        .path(parentFile.getPath())
+                        .encodedAuthority(pathUri.getEncodedAuthority())
+                        .encodedFragment(pathUri.getEncodedFragment())
+                        .encodedQuery(pathUri.getEncodedQuery())
+                        .build();
+
+                Entry parentPath = new Entry(parentUri, Entry.EntryType.CONTAINER);
+                views = buildViewList(parentPath);
+            }
 
             LinearLayout.LayoutParams separatorLayoutParams = new LinearLayout.LayoutParams(
                     (int)(mScreenDensity * 25f), LinearLayout.LayoutParams.MATCH_PARENT
@@ -137,7 +157,7 @@ public class DirectoryPathView extends FrameLayout {
                 public void onClick(View v) {
                     if (!mListenerSet.isEmpty()) {
                         for (OnPathSegmentSelectedListener listener : mListenerSet) {
-                            File path = (File)v.getTag();
+                            Entry path = (Entry)v.getTag();
                             listener.OnPathSegmentSelected(pathView, v, path);
                         }
                     }
@@ -152,7 +172,7 @@ public class DirectoryPathView extends FrameLayout {
         }
     }
 
-    public void setCurrentDirectory(File path) {
+    public void setCurrentDirectory(Entry path) {
         mContainer.removeAllViews();
         List<View> views = buildViewList(path);
         int i = 0;
