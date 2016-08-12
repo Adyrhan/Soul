@@ -1,12 +1,9 @@
 package com.adyrsoft.soul;
 
 import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.net.Uri;
-import android.os.Environment;
 import android.os.FileObserver;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -20,7 +17,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.webkit.MimeTypeMap;
 import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
@@ -29,18 +25,18 @@ import android.widget.Toast;
 
 import com.adyrsoft.soul.data.Entry;
 import com.adyrsoft.soul.data.Entry.EntryType;
+import com.adyrsoft.soul.service.FileOperation;
 import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.FileTransferService;
+import com.adyrsoft.soul.service.ProgressInfo;
+import com.adyrsoft.soul.service.TaskResult;
 import com.adyrsoft.soul.ui.DirectoryPathView;
 import com.adyrsoft.soul.ui.FileGridItemView;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -48,9 +44,30 @@ import java.util.List;
  * This fragment is a full blown file explorer. It changes the menu options on the activity to show
  * extra operations.
  */
-public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener, RequestFileTransferServiceCallback {
+public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener, RequestFileTransferServiceCallback, FileTransferService.TaskProgressListener {
 
     public static final String FILE_SCHEME = "file://";
+
+    @Override
+    public void onSubscription(HashMap<FileSystemTask, ProgressInfo> pendingTasks) {
+
+    }
+
+    @Override
+    public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
+
+    }
+
+    @Override
+    public void onTaskFinished(FileSystemTask task, TaskResult result) {
+        if ((task.getSrcWD() != null && task.getSrcWD().equals(mCurrentDir.getUri())) ||
+                (task.getDst() != null && task.getDst().equals(mCurrentDir.getUri()))) {
+            if (task.getFileOperation() == FileOperation.CREATE_FOLDER) {
+                Toast.makeText(getActivity(), "Folder created!", Toast.LENGTH_SHORT).show();
+            }
+            refresh();
+        }
+    }
 
     private enum ExplorerState {
         NAVIGATION,
@@ -148,6 +165,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 setCurrentDirectory(mCurrentDir);
             }
         }
+        mService.addTaskProgressListener(this);
     }
 
     @Override
@@ -273,19 +291,8 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         }
     }
 
-    // TODO: Replace implementation of createFolder with one that uses the FileTransferService
     private void createFolder(String folderName) {
-//        File newFolder = new File(mCurrentDir, folderName);
-//        if (newFolder.exists()) {
-//            Toast.makeText(getActivity(), "Folder already exists", Toast.LENGTH_LONG).show();
-//        } else {
-//            boolean success = newFolder.mkdirs();
-//            if (!success) {
-//                Toast.makeText(getActivity(), "Couldn't create folder", Toast.LENGTH_LONG).show();
-//            } else {
-//                refresh();
-//            }
-//        }
+        mService.createFolder(mCurrentDir.getUri(), folderName);
     }
 
     public boolean onBackPressed() {
@@ -301,22 +308,9 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     }
 
     private boolean changeCWDToParentDir() {
-//        if (mCurrentDir.getUri().getScheme().equals(FILE_SCHEME)) {
-//
-//        }
-//        File externalStorageRoot = Environment.getExternalStorageDirectory();
-//
-//        String externalStoragePath = externalStorageRoot.getPath();
-//        String parentPath = mCurrentDir.getParent();
-//
-//        if (parentPath != null && parentPath.indexOf(externalStoragePath) >= 0) {
-//            setCurrentDirectory(mCurrentDir.getParentFile());
-//            return true;
-//        } else {
-//            return false;
-//        }
         File parentFile = new File(mCurrentDir.getUri().getPath()).getParentFile();
         boolean changeToParent = (parentFile != null);
+
         if (changeToParent) {
             Uri currentUri = mCurrentDir.getUri();
             Uri parentUri = new Uri.Builder()
@@ -329,6 +323,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             Entry parentEntry = new Entry(parentUri, EntryType.CONTAINER);
             setCurrentDirectory(parentEntry);
         }
+
         return changeToParent;
     }
 
@@ -386,7 +381,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         ArrayList<Entry> entries = new ArrayList<>();
         if (files != null && files.length > 0) {
             for(File file : files) {
-                Entry entry = null;
+                Entry entry;
                 if (file.isDirectory()) {
                     entry = new Entry(Uri.parse(file.toURI().toString()), EntryType.CONTAINER);
                 } else {

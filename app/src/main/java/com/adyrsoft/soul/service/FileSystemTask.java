@@ -6,6 +6,7 @@ import android.os.Handler;
 
 import com.adyrsoft.soul.utils.StreamDuplicator;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 
@@ -22,6 +23,19 @@ public abstract class FileSystemTask implements Runnable {
     }
 
     private FileOperation mOp;
+
+    public Uri getSrcWD() {
+        return mSrcWD;
+    }
+
+    public List<Uri> getSrcs() {
+        return new ArrayList<>(mSrcs);
+    }
+
+    public Uri getDst() {
+        return mDst;
+    }
+
     private Uri mSrcWD;
     private List<Uri> mSrcs;
     private Uri mDst;
@@ -32,8 +46,8 @@ public abstract class FileSystemTask implements Runnable {
     private int mProcessedFiles;
     private int mProcessedBytes;
     private int mTotalBytes;
-    private Uri mSource;
-    private Uri mDest;
+    private Uri mSource; // Current item source
+    private Uri mDest; // Current item output destination
     private TaskResult mTaskResult;
     private State mState;
 
@@ -47,18 +61,21 @@ public abstract class FileSystemTask implements Runnable {
 
     private void init(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, StreamDuplicator duplicator) {
         if (srcs == null) {
-            throw new NullPointerException("srcs cannot be null");
+            throw new NullPointerException("srcs cannot be null for chosen operation");
         }
 
         if (op == null) {
             throw new NullPointerException("op cannot be null");
         }
 
-        if ((op == FileOperation.COPY || op == FileOperation.MOVE) && dst == null) {
-            throw new NullPointerException("dst cannot be null for copy and move operations");
+        if ((op == FileOperation.COPY ||
+                op == FileOperation.MOVE ||
+                op == FileOperation.CREATE_FOLDER) &&
+                dst == null) {
+            throw new NullPointerException("dst cannot be null for selected operation");
         }
 
-        if (srcWD == null) {
+        if (op != FileOperation.CREATE_FOLDER && srcWD == null) {
             throw new NullPointerException("srcWD cannot be null");
         }
 
@@ -92,6 +109,9 @@ public abstract class FileSystemTask implements Runnable {
                     break;
                 case REMOVE:
                     remove(mSrcWD, mSrcs);
+                    break;
+                case CREATE_FOLDER:
+                    createFolder(mSrcs.get(0));
                     break;
             }
 
@@ -158,6 +178,7 @@ public abstract class FileSystemTask implements Runnable {
     protected abstract void copy(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException;
     protected abstract void move(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException;
     protected abstract void remove(Uri srcWD, List<Uri> srcs) throws InterruptedException;
+    protected abstract void createFolder(Uri folderUri) throws InterruptedException;
 
     protected int getTotalFiles() { return mTotalFiles; }
 

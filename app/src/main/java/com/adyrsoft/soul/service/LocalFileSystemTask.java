@@ -222,4 +222,17 @@ public class LocalFileSystemTask extends FileSystemTask {
             onProgressUpdate();
         }
     }
+
+    @Override
+    protected void createFolder(Uri folderUri) throws InterruptedException {
+        setTotalFiles(1);
+        File newDir = new File(folderUri.getPath());
+
+        if (!newDir.exists() && !newDir.mkdir()) {
+            onError(null, folderUri, FileSystemErrorType.DEST_NOT_WRITABLE);
+        }
+
+        incrementProcessedFiles(1);
+        onProgressUpdate();
+    }
 }

@@ -161,6 +161,15 @@ public class FileTransferService extends Service implements TaskListener {
         return task;
     }
 
+    public FileSystemTask createFolder(final Uri parentPath, final String folderName) {
+        Uri newUri = Uri.withAppendedPath(parentPath, folderName);
+        ArrayList<Uri> input = new ArrayList<>();
+        input.add(newUri);
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.CREATE_FOLDER, null, input, parentPath, mTaskEventHub);
+        addToQueue(task);
+        return task;
+    }
+
     public void addTaskProgressListener(@NonNull TaskProgressListener listener) {
         mClientListeners.add(listener);
         onSubscription(listener);
