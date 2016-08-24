@@ -1,12 +1,17 @@
 package com.adyrsoft.soul;
 
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.DownloadManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.FileObserver;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,6 +26,8 @@ import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.GridView;
+import android.widget.LinearLayout;
+import android.widget.ListAdapter;
 import android.widget.Toast;
 
 import com.adyrsoft.soul.data.Entry;
@@ -29,13 +36,17 @@ import com.adyrsoft.soul.service.FileOperation;
 import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.service.ProgressInfo;
+import com.adyrsoft.soul.service.QueryResultCallback;
 import com.adyrsoft.soul.service.TaskResult;
 import com.adyrsoft.soul.ui.DirectoryPathView;
 import com.adyrsoft.soul.ui.FileGridItemView;
+import com.adyrsoft.soul.ui.GridRadioGroup;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -45,27 +56,124 @@ import java.util.List;
  * extra operations.
  */
 public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener, RequestFileTransferServiceCallback, FileTransferService.TaskProgressListener {
+    private static final String EXPLORER_PREFERENCES = "EXPLORER_PREFERENCES";
+    private static final String PREF_ORDER_BY = "PREF_ORDER_BY";
+    private static final String PREF_ASCENDING = "PREF_ASCENDING";
 
-    public static final String FILE_SCHEME = "file://";
-
-    @Override
-    public void onSubscription(HashMap<FileSystemTask, ProgressInfo> pendingTasks) {
-
+    public interface OnOrderSelectedListener {
+        void onOrderSelected(Entry.Field orderBy, boolean ascending);
     }
 
-    @Override
-    public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
+    public static class RefreshCallback implements QueryResultCallback {
+        private final WeakReference<ExplorerFragment> mWeakFragment;
 
-    }
+        public RefreshCallback(ExplorerFragment fragment) {
+            mWeakFragment = new WeakReference<>(fragment);
+        }
 
-    @Override
-    public void onTaskFinished(FileSystemTask task, TaskResult result) {
-        if ((task.getSrcWD() != null && task.getSrcWD().equals(mCurrentDir.getUri())) ||
-                (task.getDst() != null && task.getDst().equals(mCurrentDir.getUri()))) {
-            if (task.getFileOperation() == FileOperation.CREATE_FOLDER) {
-                Toast.makeText(getActivity(), "Folder created!", Toast.LENGTH_SHORT).show();
+        @Override
+        public void onQueryCompleted(List<Entry> entries) {
+            ExplorerFragment fragment = mWeakFragment.get();
+            if (fragment != null) {
+                fragment.updateEntries(entries);
             }
-            refresh();
+        }
+
+        @Override
+        public void onQueryFailed(Exception ex) {
+
+        }
+    }
+
+
+    public static class OrderDialogFragment extends DialogFragment {
+        public static final String ARG_ORDER_BY = "ARG_ORDER_BY";
+        public static final String ARG_ASCENDING = "ARG_ASCENDING";
+
+        private static final String CHECKED_ID = "CHECKED_ID";
+
+        private GridRadioGroup mRadioGroup;
+        private OnOrderSelectedListener mListener;
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            View root = LayoutInflater.from(getActivity()).inflate(R.layout.order_dialog_layout, null);
+            mRadioGroup = (GridRadioGroup)root.findViewById(R.id.radio_group);
+
+            if (savedInstanceState != null) {
+                int checkedId = savedInstanceState.getInt(CHECKED_ID, -1);
+                if (checkedId >= 0) {
+                    mRadioGroup.check(checkedId);
+                }
+            } else {
+                Bundle args = getArguments();
+                if (args != null) {
+                    int ordinal = args.getInt(ARG_ORDER_BY, -1);
+                    if (ordinal >= 0) {
+                        Entry.Field orderBy = Entry.Field.values()[ordinal];
+                        boolean ascending = args.getBoolean(ARG_ASCENDING);
+                        int checkedId;
+                        switch(orderBy) {
+                            case NAME:
+                                checkedId = ascending ? R.id.name_asc : R.id.name_desc;
+                                break;
+                            case EXTENSION:
+                                checkedId = ascending ? R.id.ext_asc : R.id.ext_desc;
+                                break;
+                            default:
+                                checkedId = -1;
+                        }
+
+                        if (checkedId >= 0) {
+                            mRadioGroup.check(checkedId);
+                        }
+                    }
+                }
+            }
+
+            return new AlertDialog.Builder(getActivity())
+                    .setView(root)
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            if (mListener != null) {
+                                boolean ascending = false;
+                                Entry.Field orderBy = null;
+                                switch(mRadioGroup.getCheckedRadioButtonId()) {
+                                    case R.id.name_asc:
+                                        ascending = true;
+                                        orderBy = Entry.Field.NAME;
+                                        break;
+                                    case R.id.name_desc:
+                                        ascending = false;
+                                        orderBy = Entry.Field.NAME;
+                                        break;
+                                    case R.id.ext_asc:
+                                        ascending = true;
+                                        orderBy = Entry.Field.EXTENSION;
+                                        break;
+                                    case R.id.ext_desc:
+                                        ascending = false;
+                                        orderBy = Entry.Field.EXTENSION;
+                                        break;
+                                    default:
+                                        ascending = false;
+                                        orderBy = Entry.Field.NAME;
+                                }
+                                mListener.onOrderSelected(orderBy, ascending);
+                            }
+                        }
+                    })
+                    .create();
+        }
+
+        @Override
+        public void onSaveInstanceState(Bundle out) {
+            out.putInt(CHECKED_ID, mRadioGroup.getCheckedRadioButtonId());
+        }
+
+        public void setOnOrderSelectedListener(OnOrderSelectedListener listener) {
+            mListener = listener;
         }
     }
 
@@ -79,6 +187,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         void OnNewTaskCreated(FileSystemTask mFileSystemTask);
     }
 
+    public static final String FILE_SCHEME = "file://";
     public static final String DIRECTORY_PARENT = "DIRECTORY_PARENT";
 
     private static final String EXPLORER_STATE = "EXPLORER_STATE";
@@ -99,6 +208,24 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private List<Uri> mToCopy = new ArrayList<>();
     private ExplorerFileObserver mFileObserver;
     private OnNewTaskCallback mOnNewTaskCallback;
+    private RefreshCallback mRefreshCallback = new RefreshCallback(this);
+    private Entry.Field mOrderBy;
+    private boolean mAscendingOrder;
+
+    private OnOrderSelectedListener mOnOrderSelectedListener = new OnOrderSelectedListener() {
+        @Override
+        public void onOrderSelected(Entry.Field orderBy, boolean ascending) {
+            mOrderBy = orderBy;
+            mAscendingOrder = ascending;
+
+            ArrayList<Entry> entries = new ArrayList<>();
+            for (int i = 0; i < mFileGridAdapter.getCount(); i++) {
+                entries.add(mFileGridAdapter.getItem(i));
+            }
+
+            updateEntries(entries);
+        }
+    };
 
     public ExplorerFragment() {
     }
@@ -110,6 +237,33 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         if (context instanceof OnNewTaskCallback) {
             mOnNewTaskCallback = (OnNewTaskCallback)context;
         }
+
+    }
+
+    public FileGridAdapter getFileGridAdapter() { return mFileGridAdapter; }
+
+    @Override
+    public void onSubscription(HashMap<FileSystemTask, ProgressInfo> pendingTasks) {
+
+    }
+
+    @Override
+    public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
+
+    }
+
+    @Override
+    public void onTaskFinished(FileSystemTask task, TaskResult result) {
+        if ((task.getSrcWD() != null && task.getSrcWD().equals(mCurrentDir.getUri())) ||
+                (task.getDst() != null && task.getDst().equals(mCurrentDir.getUri()))) {
+            if (task.getFileOperation() == FileOperation.CREATE_FOLDER) {
+                Toast.makeText(getActivity(), "Folder created!", Toast.LENGTH_SHORT).show();
+            }
+
+            if (task.getFileOperation() != FileOperation.QUERY) {
+                refresh();
+            }
+        }
     }
 
     @Override
@@ -120,9 +274,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         mPathView = (DirectoryPathView)rootView.findViewById(R.id.directory_path_view);
 
         mFileGridAdapter = new FileGridAdapter(getActivity());
-
         mGridView.setAdapter(mFileGridAdapter);
-
         mPathView.addOnPathSegmentSelectedListener(this);
 
         mExplorerState = ExplorerState.UNREADY;
@@ -141,8 +293,15 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             for(Entry entry : entries) {
                 mFileGridAdapter.add(entry);
             }
-        } else if (getArguments() != null ){
-            mCurrentDir = getArguments().getParcelable(DIRECTORY_PARENT);
+        } else {
+            if (getArguments() != null ) {
+                mCurrentDir = getArguments().getParcelable(DIRECTORY_PARENT);
+            }
+
+            SharedPreferences preferences = getActivity().getSharedPreferences(EXPLORER_PREFERENCES, Context.MODE_PRIVATE);
+
+            mOrderBy = Entry.Field.values()[preferences.getInt(PREF_ORDER_BY, Entry.Field.NAME.ordinal())];
+            mAscendingOrder = preferences.getBoolean(PREF_ASCENDING, true);
         }
 
         setHasOptionsMenu(true);
@@ -150,6 +309,36 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         requestFileTransferService();
 
         return rootView;
+    }
+
+    private void updateEntries(List<Entry> entries) {
+        mFileGridAdapter.clear();
+        if (entries != null && entries.size() > 0) {
+            Entry.Comparator comparator = new Entry.Comparator(mOrderBy, mAscendingOrder);
+
+            ArrayList<Entry> files = new ArrayList<>();
+            ArrayList<Entry> containers = new ArrayList<>();
+
+            for(Entry entry : entries) {
+                switch(entry.getType()) {
+                    case FILE:
+                        files.add(entry);
+                        break;
+                    case CONTAINER:
+                        containers.add(entry);
+                        break;
+                }
+            }
+
+            Collections.sort(files, comparator);
+            Collections.sort(containers, comparator);
+
+            ArrayList<Entry> sortedEntries = new ArrayList<>(containers);
+            sortedEntries.addAll(files);
+
+            mFileGridAdapter.addAll(sortedEntries);
+        }
+        mFileGridAdapter.notifyDataSetChanged();
     }
 
     private void requestFileTransferService() {
@@ -213,7 +402,16 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             case R.id.remove:
                 startRemove();
                 return true;
+            case R.id.order:
+                OrderDialogFragment orderDialogFragment = new OrderDialogFragment();
 
+                Bundle args = new Bundle();
+                args.putBoolean(OrderDialogFragment.ARG_ASCENDING, mAscendingOrder);
+                args.putInt(OrderDialogFragment.ARG_ORDER_BY, mOrderBy.ordinal());
+
+                orderDialogFragment.setArguments(args);
+                orderDialogFragment.setOnOrderSelectedListener(mOnOrderSelectedListener);
+                orderDialogFragment.show(getFragmentManager(), "orderDialogFragment");
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -285,6 +483,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         mSelectedFileSet.clear();
         mSrcWD = null;
         mToCopy.clear();
+        getActivity().invalidateOptionsMenu();
 
         if(mOnNewTaskCallback != null) {
             mOnNewTaskCallback.OnNewTaskCreated(newTask);
@@ -375,29 +574,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     }
 
     public void refresh() {
-        File[] files = new File(mCurrentDir.getUri().getPath()).listFiles();
-
-        // TODO: This code block should be moved once we do the file system queries in background
-        ArrayList<Entry> entries = new ArrayList<>();
-        if (files != null && files.length > 0) {
-            for(File file : files) {
-                Entry entry;
-                if (file.isDirectory()) {
-                    entry = new Entry(Uri.parse(file.toURI().toString()), EntryType.CONTAINER);
-                } else {
-                    entry = new Entry(Uri.parse(file.toURI().toString()), EntryType.FILE);
-                }
-                entries.add(entry);
-            }
-        }
-
-        mFileGridAdapter.clear();
-
-        if (files != null && files.length > 0) {
-            mFileGridAdapter.addAll(entries);
-        }
-
-        mFileGridAdapter.notifyDataSetChanged();
+        mService.query(mCurrentDir.getUri(), mRefreshCallback);
     }
 
     private void stateChange(ExplorerState state) {
@@ -519,7 +696,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     }
 
     private void navigateOrOpenFile(Entry entry) {
-        if (entry.getType() == EntryType.CONTAINER) {
+        if (entry.getType().equals(EntryType.CONTAINER)) {
             setCurrentDirectory(entry);
         } else {
 //            try {

@@ -50,6 +50,7 @@ public abstract class FileSystemTask implements Runnable {
     private Uri mDest; // Current item output destination
     private TaskResult mTaskResult;
     private State mState;
+    private Object mOutput;
 
     public FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener) {
         init(op, srcWD, srcs, dst, listener, null);
@@ -60,12 +61,12 @@ public abstract class FileSystemTask implements Runnable {
     }
 
     private void init(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, StreamDuplicator duplicator) {
-        if (srcs == null) {
-            throw new NullPointerException("srcs cannot be null for chosen operation");
-        }
-
         if (op == null) {
             throw new NullPointerException("op cannot be null");
+        }
+
+        if ((op != FileOperation.QUERY) && srcs == null) {
+            throw new NullPointerException("srcs cannot be null for chosen operation");
         }
 
         if ((op == FileOperation.COPY ||
@@ -113,6 +114,13 @@ public abstract class FileSystemTask implements Runnable {
                 case CREATE_FOLDER:
                     createFolder(mSrcs.get(0));
                     break;
+                case QUERY:
+                    query(mSrcWD);
+                    break;
+            }
+
+            if (mTaskResult == null) { // Default task result if op method didn't set one
+                mTaskResult = TaskResult.COMPLETED;
             }
 
             onTaskFinished();
@@ -154,7 +162,7 @@ public abstract class FileSystemTask implements Runnable {
         mState = State.FINISHED;
 
         if (mListener != null) {
-            mListener.onTaskFinished(this, mTaskResult);
+            mListener.onTaskFinished(this, mTaskResult, mOutput);
         }
     }
 
@@ -179,6 +187,7 @@ public abstract class FileSystemTask implements Runnable {
     protected abstract void move(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException;
     protected abstract void remove(Uri srcWD, List<Uri> srcs) throws InterruptedException;
     protected abstract void createFolder(Uri folderUri) throws InterruptedException;
+    protected abstract void query(Uri srcWD) throws InterruptedException;
 
     protected int getTotalFiles() { return mTotalFiles; }
 
@@ -214,6 +223,8 @@ public abstract class FileSystemTask implements Runnable {
         mTotalBytes = totalBytes;
     }
 
+    protected void setTaskResult(TaskResult result) { mTaskResult = result; }
+
     protected Uri getSource() { return mSource; }
 
     protected void setSource(Uri source) { mSource = source; }
@@ -221,4 +232,5 @@ public abstract class FileSystemTask implements Runnable {
     protected Uri getDest() { return mDest; }
 
     protected void setDest(Uri dest) { mDest = dest; }
+    protected void setOutput(Object output) { mOutput = output; }
 }

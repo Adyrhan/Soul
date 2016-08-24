@@ -9,6 +9,8 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.adyrsoft.soul.data.Entry;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -43,8 +45,9 @@ public class FileTransferService extends Service implements TaskListener {
     private Handler mHandler;
     private ExecutorService mExecutor;
     private TaskErrorListener mErrorListener;
-    private ArrayList<TaskProgressListener> mClientListeners = new ArrayList<>();
-    private HashMap<FileSystemTask,ProgressInfo> mTaskStatusCache = new HashMap<>();
+    private ArrayList<TaskProgressListener> mClientListeners = new ArrayList<>(); // This list of listeners want to know of any event of any task
+    private HashMap<FileSystemTask, Object> mOpSpecificListeners = new HashMap<>(); // This list of listeners want to know of a particular task completion and result
+    private HashMap<FileSystemTask, ProgressInfo> mTaskStatusCache = new HashMap<>();
     private LinkedList<ErrorInfo> mTaskErrorQueue = new LinkedList<>();
     private ProgressNotifier mProgressNotifier;
 
@@ -55,8 +58,8 @@ public class FileTransferService extends Service implements TaskListener {
         }
 
         @Override
-        public void onTaskFinished(FileSystemTask task, TaskResult result) {
-            mProgressNotifier.onTaskFinished(task, result);
+        public void onTaskFinished(FileSystemTask task, TaskResult result, Object output) {
+            mProgressNotifier.onTaskFinished(task, result, output);
         }
 
         @Override
@@ -82,13 +85,50 @@ public class FileTransferService extends Service implements TaskListener {
     }
 
     @Override
-    public void onTaskFinished(FileSystemTask task, TaskResult result) {
+    public void onTaskFinished(FileSystemTask task, TaskResult result, Object output) {
         mTaskStatusCache.remove(task);
+
+        handleSpecificCallbacks(task, result, output);
+
+        mOpSpecificListeners.remove(task);
 
         if (mClientListeners.size() > 0) {
             for (TaskProgressListener listener : mClientListeners) {
                 listener.onTaskFinished(task, result);
             }
+        }
+    }
+
+    private void handleSpecificCallbacks(FileSystemTask task, TaskResult result, Object output) {
+        Object specificListener = mOpSpecificListeners.get(task);
+
+        if (specificListener == null) {
+            return;
+        }
+
+        switch(task.getFileOperation()) {
+            case COPY:
+                break;
+            case MOVE:
+                break;
+            case REMOVE:
+                break;
+            case CREATE_FOLDER:
+                break;
+            case QUERY:
+                QueryResultCallback callback = (QueryResultCallback) specificListener;
+                switch (result) {
+                    case COMPLETED:
+                        callback.onQueryCompleted((List<Entry>)output);
+                        break;
+                    case FAILED:
+                        callback.onQueryFailed((Exception)output);
+                        break;
+                    case CANCELED:
+                        // We don't notify on canceled tasks
+                        break;
+                }
+                break;
         }
     }
 
@@ -161,11 +201,18 @@ public class FileTransferService extends Service implements TaskListener {
         return task;
     }
 
-    public FileSystemTask createFolder(final Uri parentPath, final String folderName) {
+    public FileSystemTask createFolder(Uri parentPath, String folderName) {
         Uri newUri = Uri.withAppendedPath(parentPath, folderName);
         ArrayList<Uri> input = new ArrayList<>();
         input.add(newUri);
         LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.CREATE_FOLDER, null, input, parentPath, mTaskEventHub);
+        addToQueue(task);
+        return task;
+    }
+
+    public FileSystemTask query(Uri location, QueryResultCallback callback) {
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.QUERY, location, null, null, mTaskEventHub);
+        mOpSpecificListeners.put(task, callback);
         addToQueue(task);
         return task;
     }

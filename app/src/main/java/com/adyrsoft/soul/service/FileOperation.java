@@ -7,5 +7,6 @@ public enum FileOperation {
     COPY,
     MOVE,
     REMOVE,
-    CREATE_FOLDER
+    CREATE_FOLDER,
+    QUERY
 }

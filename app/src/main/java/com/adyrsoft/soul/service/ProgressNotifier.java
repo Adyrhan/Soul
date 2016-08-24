@@ -25,6 +25,7 @@ public class ProgressNotifier extends ProgressListener {
         private MessageType mType;
         private ProgressInfo mProgressInfo;
         private TaskResult mTaskResult;
+        private Object mTaskOutput;
 
         public MessageType getType() {
             return mType;
@@ -48,6 +49,14 @@ public class ProgressNotifier extends ProgressListener {
 
         public void setTaskResult(TaskResult taskResult) {
             mTaskResult = taskResult;
+        }
+
+        public Object getTaskOutput() {
+            return mTaskOutput;
+        }
+
+        public void setTaskOutput(Object taskOutput) {
+            mTaskOutput = taskOutput;
         }
     }
 
@@ -90,8 +99,8 @@ public class ProgressNotifier extends ProgressListener {
     }
 
     @Override
-    public void onTaskFinished(FileSystemTask task, TaskResult result) {
-        notifyTaskFinished(task, result);
+    public void onTaskFinished(FileSystemTask task, TaskResult result, Object output) {
+        notifyTaskFinished(task, result, output);
     }
 
     public synchronized void notifyTaskUpdate(FileSystemTask task, ProgressInfo info) {
@@ -101,10 +110,11 @@ public class ProgressNotifier extends ProgressListener {
         mUpdates.put(task, msg);
     }
 
-    public synchronized void notifyTaskFinished(FileSystemTask task, TaskResult result) {
+    public synchronized void notifyTaskFinished(FileSystemTask task, TaskResult result, Object output) {
         Message msg = new Message();
         msg.setType(MessageType.TASK_FINISHED);
         msg.setTaskResult(result);
+        msg.setTaskOutput(output);
         mUpdates.put(task, msg);
     }
 
@@ -130,7 +140,7 @@ public class ProgressNotifier extends ProgressListener {
                             mListener.onProgressUpdate(task, msg.getProgressInfo());
                             break;
                         case TASK_FINISHED:
-                            mListener.onTaskFinished(task, msg.getTaskResult());
+                            mListener.onTaskFinished(task, msg.getTaskResult(), msg.getTaskOutput());
                             break;
                     }
                 }

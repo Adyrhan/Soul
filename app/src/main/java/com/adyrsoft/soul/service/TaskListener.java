@@ -8,6 +8,6 @@ import android.net.Uri;
  */
 public interface TaskListener {
     void onProgressUpdate(FileSystemTask task, ProgressInfo info);
-    void onTaskFinished(FileSystemTask task, TaskResult result);
+    void onTaskFinished(FileSystemTask task, TaskResult result, Object output);
     void onError(FileSystemTask task, ErrorInfo errorInfo);
 }

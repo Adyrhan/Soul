@@ -21,4 +21,7 @@
     <string name="overwrite_button_label">Overwrite</string>
     <string name="keep_button_label">Keep</string>
     <string name="menu_item_remove">Remove</string>
+    <string name="sort">Sort</string>
+    <string name="order_field_label_name">Name</string>
+    <string name="order_field_label_extension">Extension</string>
 </resources>

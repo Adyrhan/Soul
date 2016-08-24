@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.adyrsoft.soul.data.Entry;
 import com.adyrsoft.soul.utils.FileUtils;
 import com.adyrsoft.soul.utils.StreamDuplicationFailedException;
 import com.adyrsoft.soul.utils.StreamDuplicator;
@@ -234,5 +235,25 @@ public class LocalFileSystemTask extends FileSystemTask {
 
         incrementProcessedFiles(1);
         onProgressUpdate();
+    }
+
+    @Override
+    protected void query(Uri resource) throws InterruptedException {
+        File[] files = new File(resource.getPath()).listFiles();
+
+        ArrayList<Entry> entries = new ArrayList<>();
+        if (files != null && files.length > 0) {
+            for(File file : files) {
+                Entry entry;
+                if (file.isDirectory()) {
+                    entry = new Entry(Uri.parse(file.toURI().toString()), Entry.EntryType.CONTAINER);
+                } else {
+                    entry = new Entry(Uri.parse(file.toURI().toString()), Entry.EntryType.FILE);
+                }
+                entries.add(entry);
+            }
+        }
+
+        setOutput(entries);
     }
 }
