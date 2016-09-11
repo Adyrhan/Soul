@@ -361,17 +361,23 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
     @Override
     public void onBackPressed() {
-        ExplorerFragment explorerFragment = (ExplorerFragment) mFragmentAdapter.getItem(mViewPager.getCurrentItem());
-        if (explorerFragment.onBackPressed()) {
-            mToolbar.removeCallbacks(resetBackCountPress);
-            mBackCount++;
-            if (mBackCount < 2) {
-                Toast.makeText(this, R.string.press_back_again_message, Toast.LENGTH_SHORT).show();
-                mToolbar.postDelayed(resetBackCountPress, BACK_PRESS_DELAY_MILLIS);
-            } else {
-                mBackCount = 0;
-                super.onBackPressed();
+        Fragment fragment = mFragmentAdapter.getItem(mViewPager.getCurrentItem());
+
+        if (fragment instanceof ExplorerFragment) {
+            ExplorerFragment explorerFragment = (ExplorerFragment) fragment;
+            if (explorerFragment.onBackPressed()) {
+                mToolbar.removeCallbacks(resetBackCountPress);
+                mBackCount++;
+                if (mBackCount < 2) {
+                    Toast.makeText(this, R.string.press_back_again_message, Toast.LENGTH_SHORT).show();
+                    mToolbar.postDelayed(resetBackCountPress, BACK_PRESS_DELAY_MILLIS);
+                } else {
+                    mBackCount = 0;
+                    super.onBackPressed();
+                }
             }
+        } else {
+            super.onBackPressed();
         }
     }
 
