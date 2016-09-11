@@ -1,7 +1,10 @@
 package com.adyrsoft.soul;
 
+import android.Manifest;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -29,6 +32,7 @@ import com.adyrsoft.soul.service.FileTransferService;
 import com.adyrsoft.soul.service.ProgressInfo;
 import com.adyrsoft.soul.service.TaskResult;
 import com.adyrsoft.soul.ui.BackgroundTasksFragment;
+import com.adyrsoft.soul.ui.BlankFragment;
 import com.adyrsoft.soul.ui.DynamicFragmentPagerAdapter;
 import com.adyrsoft.soul.ui.FileSystemErrorDialog;
 import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
@@ -41,6 +45,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
     private static final String TAG = ExplorerActivity.class.getName();
     private static final String TAG_PROGRESS_DIALOG_FRAGMENT = "progressdialog";
     private static final String STATE_NUM_FRAGMENTS = "STATE_NUM_FRAGMENTS";
+    private static final int STORAGE_PERMISSION_REQUEST = 0;
     private Toolbar mToolbar;
     private int mBackCount;
     private FileTransferService mService;
@@ -144,10 +149,33 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
                 addExplorerTab();
             }
         } else {
-            addExplorerTab();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                int storagePermission = checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                if (storagePermission == PackageManager.PERMISSION_GRANTED) {
+                    addExplorerTab();
+                } else {
+                    addBlankTab();
+                    requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION_REQUEST);
+                }
+            } else {
+                addExplorerTab();
+            }
         }
 
         Log.d(TAG, "activity onCreate called");
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch(requestCode) {
+            case STORAGE_PERMISSION_REQUEST:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    addExplorerTab();
+                    mFragmentAdapter.removeFragmentAt(mFragmentAdapter.getCount()-2);
+                    mTabLayout.setupWithViewPager(mViewPager);
+                }
+                break;
+        }
     }
 
     private void addExplorerTab() {
@@ -166,6 +194,16 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
         mTabLayout.setupWithViewPager(mViewPager);
 
         addPlusTab();
+    }
+
+    private void addBlankTab() {
+        BlankFragment fragment = new BlankFragment();
+        FragmentEntry fragmentEntry = new FragmentEntry();
+        fragmentEntry.setFragment(fragment);
+        fragmentEntry.setTitle("PERM");
+
+        mFragmentAdapter.addFragment(fragmentEntry);
+        mTabLayout.setupWithViewPager(mViewPager);
     }
 
     private void addPlusTab() {
