@@ -173,6 +173,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
                     addExplorerTab();
                     mFragmentAdapter.removeFragmentAt(mFragmentAdapter.getCount()-2);
                     mTabLayout.setupWithViewPager(mViewPager);
+                    addPlusTab();
                 }
                 break;
         }
