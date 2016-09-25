@@ -189,7 +189,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
         FragmentEntry fragmentEntry = new FragmentEntry();
         fragmentEntry.setFragment(explorerFragment);
-        fragmentEntry.setTitle("Local");
+        fragmentEntry.setTitle(getString(R.string.tab_label_local));
 
         mFragmentAdapter.addFragment(fragmentEntry);
         mTabLayout.setupWithViewPager(mViewPager);
@@ -201,7 +201,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
         BlankFragment fragment = new BlankFragment();
         FragmentEntry fragmentEntry = new FragmentEntry();
         fragmentEntry.setFragment(fragment);
-        fragmentEntry.setTitle("PERM");
+        fragmentEntry.setTitle(getString(R.string.tab_label_permission));
 
         mFragmentAdapter.addFragment(fragmentEntry);
         mTabLayout.setupWithViewPager(mViewPager);

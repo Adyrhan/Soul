@@ -24,4 +24,6 @@
     <string name="sort">Sort</string>
     <string name="order_field_label_name">Name</string>
     <string name="order_field_label_extension">Extension</string>
+    <string name="tab_label_local">Local</string>
+    <string name="tab_label_permission">PERM</string>
 </resources>
