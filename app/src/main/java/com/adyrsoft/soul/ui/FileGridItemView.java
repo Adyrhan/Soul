@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -46,8 +47,8 @@ public class FileGridItemView extends LinearLayout {
     private void init() {
         mScreenDensity = getContext().getResources().getDisplayMetrics().density;
 
-        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, (int)(85 * mScreenDensity)
+        AbsListView.LayoutParams params = new AbsListView.LayoutParams(
+                AbsListView.LayoutParams.MATCH_PARENT, (int)(85 * mScreenDensity)
         );
 
         setPadding((int)(5 * mScreenDensity), 0, (int)(5 * mScreenDensity), 0);
