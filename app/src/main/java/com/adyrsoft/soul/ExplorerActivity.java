@@ -259,7 +259,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
 
     @Override
     public void onProgressUpdate(FileSystemTask task, ProgressInfo info) {
-        if (!mReportProgress) return;
+        if (!mReportProgress || mProgressDialogTarget != task) return;
 
         if (mProgressDialogFragment == null) {
             mProgressDialogFragment = (TaskProgressDialogFragment)getSupportFragmentManager().findFragmentByTag(TAG_PROGRESS_DIALOG_FRAGMENT);
@@ -270,6 +270,7 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
                 mProgressDialogFragment.setOnHideButtonClick(new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
+                        mReportProgress = false;
                         releaseProgressDialog();
                     }
                 });
@@ -423,9 +424,13 @@ public class ExplorerActivity extends AppCompatActivity implements ExplorerFragm
     }
 
     @Override
-    public void OnNewTaskCreated(FileSystemTask mFileSystemTask) {
+    public void OnNewTaskCreated(FileSystemTask task) {
+        showProgressDialog(task);
+    }
+
+    public void showProgressDialog(FileSystemTask task) {
         mReportProgress = true;
-        mProgressDialogTarget = mFileSystemTask;
+        mProgressDialogTarget = task;
     }
 
     private class ExplorerPagerAdapter extends DynamicFragmentPagerAdapter{
