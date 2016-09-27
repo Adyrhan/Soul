@@ -153,8 +153,8 @@ public class BackgroundTasksFragment extends Fragment implements RequestFileTran
             String taskDesc = String.format(Locale.US, "%s %d %s from", taskOp, info.getTotalFiles(), fileWord);
 
             holder.taskDescription.setText(taskDesc);
-            holder.from.setText(info.getSource().toString());
-            holder.to.setText(info.getDest().toString());
+            if (info.getSource() != null) holder.from.setText(info.getSource().toString());
+            if (info.getDest() != null) holder.to.setText(info.getDest().toString());
 
             if (info.getDest() == null) {
                 holder.toLabel.setVisibility(View.GONE);
