@@ -60,7 +60,7 @@ public class ProgressNotifier extends ProgressListener {
         }
     }
 
-    private static final long INTERVAL_MSEC = (long)(1000 / (float)15);
+    private static final long INTERVAL_MSEC = (long)(1000 / (float)2);
     private HashMap<FileSystemTask, Message> mUpdates = new HashMap<>();
     private Thread mThread;
     private boolean mShouldStop;

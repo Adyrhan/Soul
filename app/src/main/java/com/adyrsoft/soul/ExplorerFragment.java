@@ -200,7 +200,8 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private FileTransferService mService;
     private Menu mMenu;
     private TaskProgressDialogFragment mProgressDialogFragment;
-    private List<Uri> mToCopy = new ArrayList<>();
+    private List<Uri> mFileClipboard = new ArrayList<>();
+    private FileOperation mClipboardOperation;
     private ExplorerFileObserver mFileObserver;
     private OnNewTaskCallback mOnNewTaskCallback;
     private RefreshCallback mRefreshCallback = new RefreshCallback(this);
@@ -367,7 +368,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             case NAVIGATION:
                 menuInflater.inflate(R.menu.menu_explorer_navigation, menu);
 
-                if (mToCopy.size() > 0) {
+                if (mFileClipboard.size() > 0) {
                     MenuItem pasteItem = menu.findItem(R.id.paste);
                     pasteItem.setVisible(true);
                 }
@@ -390,8 +391,19 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 prepareCopy();
                 return true;
 
+            case R.id.move:
+                prepareMove();
+                return true;
+
             case R.id.paste:
-                startCopy();
+                switch(mClipboardOperation) {
+                    case COPY:
+                        startCopy();
+                        break;
+                    case MOVE:
+                        startMove();
+                        break;
+                }
                 return true;
 
             case R.id.remove:
@@ -411,6 +423,19 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 return super.onOptionsItemSelected(item);
         }
 
+    }
+
+    private void prepareMove() {
+        mFileClipboard.clear();
+
+        for(Entry entry : mSelectedFileSet) {
+            mFileClipboard.add(entry.getUri());
+        }
+        mClipboardOperation = FileOperation.MOVE;
+        mSelectedFileSet.clear();
+        mSrcWD = mCurrentDir.getUri();
+        stateChange(ExplorerState.NAVIGATION);
+        Toast.makeText(getActivity(), "You selected to copy " + mFileClipboard.size() + " files", Toast.LENGTH_SHORT).show();
     }
 
     private void showCreateFolderDialog() {
@@ -447,15 +472,16 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     }
 
     private void prepareCopy() {
-        mToCopy.clear();
+        mFileClipboard.clear();
 
         for(Entry entry : mSelectedFileSet) {
-            mToCopy.add(entry.getUri());
+            mFileClipboard.add(entry.getUri());
         }
-
+        mClipboardOperation = FileOperation.COPY;
+        mSelectedFileSet.clear();
         mSrcWD = mCurrentDir.getUri();
         stateChange(ExplorerState.NAVIGATION);
-        Toast.makeText(getActivity(), "You selected to copy " + mToCopy.size() + " files", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getActivity(), "You selected to copy " + mFileClipboard.size() + " files", Toast.LENGTH_SHORT).show();
     }
 
     private void startRemove() {
@@ -474,10 +500,20 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     }
 
     private void startCopy() {
-        FileSystemTask newTask = mService.copy(mSrcWD, mToCopy, mCurrentDir.getUri());
-        mSelectedFileSet.clear();
+        FileSystemTask newTask = mService.copy(mSrcWD, mFileClipboard, mCurrentDir.getUri());
         mSrcWD = null;
-        mToCopy.clear();
+        mFileClipboard.clear();
+        getActivity().invalidateOptionsMenu();
+
+        if(mOnNewTaskCallback != null) {
+            mOnNewTaskCallback.OnNewTaskCreated(newTask);
+        }
+    }
+
+    private void startMove() {
+        FileSystemTask newTask = mService.move(mSrcWD, mFileClipboard, mCurrentDir.getUri());
+        mSrcWD = null;
+        mFileClipboard.clear();
         getActivity().invalidateOptionsMenu();
 
         if(mOnNewTaskCallback != null) {

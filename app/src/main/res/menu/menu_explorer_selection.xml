@@ -2,6 +2,8 @@
 <menu
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:id="@+id/copy" android:title="@string/menu_item_copy" android:icon="@drawable/ic_action_copy_icon" app:showAsAction="always" />
-    <item android:id="@+id/remove" android:title="@string/menu_item_remove" android:icon="@drawable/ic_action_delete_forever" app:showAsAction="always" />
+    <item android:id="@+id/copy" android:title="@string/menu_item_copy" android:icon="@drawable/ic_copy_24dp" app:showAsAction="always" />
+    <item android:id="@+id/move" android:title="Move" android:icon="@drawable/ic_move_24dp" app:showAsAction="always" />
+    <item android:id="@+id/rename" android:title="Rename" android:icon="@drawable/ic_rename_24dp" app:showAsAction="always" />
+    <item android:id="@+id/remove" android:title="@string/menu_item_remove" android:icon="@drawable/ic_action_delete_forever" app:showAsAction="ifRoom" />
 </menu>

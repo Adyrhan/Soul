@@ -195,8 +195,71 @@ public class LocalFileSystemTask extends FileSystemTask {
     }
 
     @Override
-    protected void move(Uri srcWD, List<Uri> srcs, Uri dst) {
+    protected void move(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException {
+        setTotalFiles(srcs.size());
+        for (Uri src : srcs) {
+            boolean retry;
+            do {
+                retry = false;
+                File srcFile = new File(src.getPath());
+                String relativePath = new File(srcWD.getPath())
+                        .toURI()
+                        .relativize(srcFile.toURI())
+                        .getPath();
+                File dstFile = new File(dst.getPath(), relativePath);
 
+                if(!srcFile.renameTo(dstFile)) {
+                    FileSystemErrorType errorType;
+                    if (!srcFile.getParentFile().canWrite()) {
+                        errorType = FileSystemErrorType.SOURCE_NOT_WRITABLE;
+                    } else if (dstFile.getParentFile().exists() && !dstFile.getParentFile().canWrite()) {
+                        errorType = FileSystemErrorType.DEST_NOT_WRITABLE;
+                    } else {
+                        errorType = FileSystemErrorType.UNKNOWN;
+                    }
+
+                    Solution s = onError(src, Uri.fromFile(dstFile), errorType);
+                    switch(errorType) {
+                        case SOURCE_NOT_WRITABLE:
+                            switch(s.getAction()) {
+                                case RETRY_CONTINUE:
+                                    retry = true;
+                                    srcFile.getParentFile().setWritable(true, false);
+                                    break;
+                                case IGNORE:
+                                    break;
+                                case CANCEL:
+                                    throw new InterruptedException("User interrupted the task");
+                            }
+                            break;
+                        case DEST_NOT_WRITABLE:
+                            switch(s.getAction()) {
+                                case RETRY_CONTINUE:
+                                    retry = true;
+                                    dstFile.getParentFile().setWritable(true, false);
+                                    break;
+                                case IGNORE:
+                                    break;
+                                case CANCEL:
+                                    throw new InterruptedException("User interrupted the task");
+                            }
+                            break;
+                        default:
+                            switch(s.getAction()) {
+                                case RETRY_CONTINUE:
+                                    retry = true;
+                                    break;
+                                case IGNORE:
+                                    break;
+                                case CANCEL:
+                                    throw new InterruptedException("User interrupted the task");
+                            }
+                            break;
+                    }
+                }
+            } while(retry);
+            incrementProcessedFiles(1);
+        }
     }
 
     @Override
