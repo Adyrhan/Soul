@@ -90,6 +90,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         private OnOrderSelectedListener mListener;
 
         @Override
+        @NonNull
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             View root = LayoutInflater.from(getActivity()).inflate(R.layout.order_dialog_layout, null);
             mRadioGroup = (GridRadioGroup)root.findViewById(R.id.radio_group);
