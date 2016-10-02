@@ -47,8 +47,8 @@ import java.util.HashSet;
 import java.util.List;
 
 /**
- * This fragment is a full blown file explorer. It changes the menu options on the activity to show
- * extra operations.
+ * File explorer user interface. All file operations and queries are done on the background service.
+ * It changes the menu options on the activity to show extra operations.
  */
 public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPathSegmentSelectedListener, RequestFileTransferServiceCallback, FileTransferService.TaskProgressListener {
     private static final String EXPLORER_PREFERENCES = "EXPLORER_PREFERENCES";
@@ -79,7 +79,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
         }
     }
-
 
     public static class OrderDialogFragment extends DialogFragment {
         public static final String ARG_ORDER_BY = "ARG_ORDER_BY";
