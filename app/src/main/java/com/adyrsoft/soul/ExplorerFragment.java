@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.FileObserver;
@@ -40,6 +41,7 @@ import com.adyrsoft.soul.ui.TaskProgressDialogFragment;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -730,37 +732,18 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         if (entry.getType().equals(EntryType.CONTAINER)) {
             setCurrentDirectory(entry);
         } else {
-//            try {
-//                // TODO: Figure out a better way to find the file's mime type
-//                String mimeType = URLConnection.guessContentTypeFromStream(new FileInputStream(entry));
-//
-//                if (mimeType == null) {
-//                    MimeTypeMap mimeTypeMap = MimeTypeMap.getSingleton();
-//                    String fileName = entry.getName();
-//                    String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
-//                    mimeType = mimeTypeMap.getMimeTypeFromExtension(extension);
-//                }
-//
-//                if (mimeType == null) {
-//                    Toast.makeText(getActivity(), "Unknown file type", Toast.LENGTH_LONG).show();
-//                } else {
-//                    Log.d(TAG, "Guessed mimetype for file is " + mimeType);
-//                    Intent fileOpenIntent = new Intent(Intent.ACTION_VIEW);
-//
-//                    fileOpenIntent.setDataAndType(entry.getUri(), mimeType);
-//
-//                    startActivity(fileOpenIntent);
-//                }
-//
-//            } catch (FileNotFoundException e) {
-//                Toast.makeText(getActivity(), "Couldn't open the file. It has been deleted.", Toast.LENGTH_LONG).show();
-//            } catch (IOException e) {
-//                Toast.makeText(getActivity(), "Read error", Toast.LENGTH_LONG).show();
-//            } catch (ActivityNotFoundException e) {
-//                Log.e(TAG, null, e);
-//                Toast.makeText(getActivity(), "There isn't an app installed that can handle this file type", Toast.LENGTH_LONG).show();
-//            }
+            openFile(entry);
+        }
+    }
 
+    private void openFile(Entry entry) {
+        String mimeType = URLConnection.guessContentTypeFromName(entry.getUri().toString());
+        if (mimeType != null) {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(entry.getUri(), mimeType);
+            startActivity(intent);
+        } else {
+            Toast.makeText(getActivity(), "Resource type not recognized", Toast.LENGTH_LONG).show();
         }
     }
 
