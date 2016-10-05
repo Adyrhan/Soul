@@ -26,4 +26,11 @@
     <string name="order_field_label_extension">Extension</string>
     <string name="tab_label_local">Local</string>
     <string name="tab_label_permission">PERM</string>
+    <string-array name="file_types">
+        <item>Video</item>
+        <item>Audio</item>
+        <item>Image</item>
+        <item>Text</item>
+        <item>Other</item>
+    </string-array>
 </resources>

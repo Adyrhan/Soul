@@ -378,6 +378,10 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 break;
             case SELECTION:
                 menuInflater.inflate(R.menu.menu_explorer_selection, menu);
+                MenuItem renameItem = menu.findItem(R.id.rename);
+                if (mSelectedFileSet.size() > 1) {
+                    renameItem.setVisible(false);
+                }
                 break;
         }
         mMenu = menu;
@@ -701,12 +705,13 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
 
                     Entry entryTag = ((Entry) v.getTag());
 
-                    boolean select = !mSelectedFileSet.contains(entryTag);
-
-                    if (select) {
-                        v.setSelected(true);
-                        mSelectedFileSet.add(entryTag);
-                    }
+                    switchSelectedFileState(entryTag, v);
+//                    boolean select = !mSelectedFileSet.contains(entryTag);
+//
+//                    if (select) {
+//                        v.setSelected(true);
+//                        mSelectedFileSet.add(entryTag);
+//                    }
                     return true;
                 }
             });
@@ -726,6 +731,8 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         } else {
             mSelectedFileSet.remove(file);
         }
+
+        getActivity().invalidateOptionsMenu();
     }
 
     private void navigateOrOpenFile(Entry entry) {
@@ -736,15 +743,50 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         }
     }
 
-    private void openFile(Entry entry) {
+    private void openFile(final Entry entry) {
         String mimeType = URLConnection.guessContentTypeFromName(entry.getUri().toString());
         if (mimeType != null) {
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(entry.getUri(), mimeType);
-            startActivity(intent);
+            openFileWithType(entry, mimeType);
         } else {
-            Toast.makeText(getActivity(), "Resource type not recognized", Toast.LENGTH_LONG).show();
+            AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                    .setTitle("Select resource type")
+                    .setItems(R.array.file_types, new DialogInterface.OnClickListener() {
+                        public static final int VIDEO_TYPE = 0;
+                        public static final int AUDIO_TYPE = 1;
+                        public static final int IMAGE_TYPE = 2;
+                        public static final int TEXT_TYPE = 3;
+                        public static final int OTHER_TYPE = 4;
+
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            switch(which) {
+                                case VIDEO_TYPE:
+                                    openFileWithType(entry, "video/*");
+                                    break;
+                                case AUDIO_TYPE:
+                                    openFileWithType(entry, "audio/*");
+                                    break;
+                                case IMAGE_TYPE:
+                                    openFileWithType(entry, "image/*");
+                                    break;
+                                case TEXT_TYPE:
+                                    openFileWithType(entry, "text/*");
+                                    break;
+                                default:
+                                    openFileWithType(entry, "*/*");
+
+                            }
+                        }
+                    })
+                    .create();
+            dialog.show();
         }
+    }
+
+    private void openFileWithType(Entry entry, String mimeType) {
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(entry.getUri(), mimeType);
+        startActivity(intent);
     }
 
     public class ExplorerFileObserver extends FileObserver {
