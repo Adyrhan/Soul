@@ -706,12 +706,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                     Entry entryTag = ((Entry) v.getTag());
 
                     switchSelectedFileState(entryTag, v);
-//                    boolean select = !mSelectedFileSet.contains(entryTag);
-//
-//                    if (select) {
-//                        v.setSelected(true);
-//                        mSelectedFileSet.add(entryTag);
-//                    }
                     return true;
                 }
             });
