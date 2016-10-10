@@ -425,6 +425,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 orderDialogFragment.setArguments(args);
                 orderDialogFragment.setOnOrderSelectedListener(mOnOrderSelectedListener);
                 orderDialogFragment.show(getFragmentManager(), "orderDialogFragment");
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
