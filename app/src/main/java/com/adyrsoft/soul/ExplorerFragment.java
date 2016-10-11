@@ -205,7 +205,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     private TaskProgressDialogFragment mProgressDialogFragment;
     private List<Uri> mFileClipboard = new ArrayList<>();
     private FileOperation mClipboardOperation;
-    private ExplorerFileObserver mFileObserver;
     private OnNewTaskCallback mOnNewTaskCallback;
     private RefreshCallback mRefreshCallback = new RefreshCallback(this);
     private Entry.Field mOrderBy;
@@ -359,10 +358,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
     @Override
     public void onPause() {
         super.onPause();
-        if (mFileObserver != null) {
-            mFileObserver.stopWatching();
-            mFileObserver = null;
-        }
     }
 
     @Override
@@ -643,15 +638,6 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             throw new IllegalArgumentException(entry.getUri().getPath() + " is not a directory");
         }
 
-        if (mFileObserver != null) {
-            mFileObserver.stopWatching();
-        }
-
-        if (entry.getUri().getScheme().equals(FILE_SCHEME)) {
-            mFileObserver = new ExplorerFileObserver(entry.getUri().getPath());
-            mFileObserver.startWatching();
-        }
-
         mCurrentDir = entry;
         refresh();
         mPathView.setCurrentDirectory(mCurrentDir);
@@ -829,24 +815,4 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         intent.setDataAndType(entry.getUri(), mimeType);
         startActivity(intent);
     }
-
-    public class ExplorerFileObserver extends FileObserver {
-        private Handler mUIHandler = new Handler();
-
-        public ExplorerFileObserver(String path) {
-            super(path, CREATE | DELETE | MOVED_FROM | MOVED_TO);
-        }
-
-        @Override
-        public void onEvent(int event, String path) {
-            mUIHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    refresh();
-                }
-            });
-        }
-    }
-
-
 }
