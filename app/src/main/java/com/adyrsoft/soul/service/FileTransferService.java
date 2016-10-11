@@ -195,6 +195,14 @@ public class FileTransferService extends Service implements TaskListener {
         return task;
     }
 
+    public FileSystemTask rename(Uri srcWD, Uri src, Uri dest) {
+        ArrayList<Uri> input = new ArrayList<>();
+        input.add(src);
+        LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.RENAME, srcWD, input, dest, mTaskEventHub);
+        addToQueue(task);
+        return task;
+    }
+
     public FileSystemTask remove(Uri srcWD, List<Uri> srcs) {
         LocalFileSystemTask task = new LocalFileSystemTask(FileOperation.REMOVE, srcWD, new ArrayList<>(srcs), null, mTaskEventHub);
         addToQueue(task);

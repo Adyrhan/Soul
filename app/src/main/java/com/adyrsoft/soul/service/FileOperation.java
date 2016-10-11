@@ -6,6 +6,7 @@ package com.adyrsoft.soul.service;
 public enum FileOperation {
     COPY,
     MOVE,
+    RENAME,
     REMOVE,
     CREATE_FOLDER,
     QUERY

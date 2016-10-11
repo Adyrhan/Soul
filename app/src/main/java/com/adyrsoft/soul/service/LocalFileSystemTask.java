@@ -198,68 +198,81 @@ public class LocalFileSystemTask extends FileSystemTask {
     protected void move(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException {
         setTotalFiles(srcs.size());
         for (Uri src : srcs) {
-            boolean retry;
-            do {
-                retry = false;
-                File srcFile = new File(src.getPath());
-                String relativePath = new File(srcWD.getPath())
-                        .toURI()
-                        .relativize(srcFile.toURI())
-                        .getPath();
-                File dstFile = new File(dst.getPath(), relativePath);
-
-                if(!srcFile.renameTo(dstFile)) {
-                    FileSystemErrorType errorType;
-                    if (!srcFile.getParentFile().canWrite()) {
-                        errorType = FileSystemErrorType.SOURCE_NOT_WRITABLE;
-                    } else if (dstFile.getParentFile().exists() && !dstFile.getParentFile().canWrite()) {
-                        errorType = FileSystemErrorType.DEST_NOT_WRITABLE;
-                    } else {
-                        errorType = FileSystemErrorType.UNKNOWN;
-                    }
-
-                    Solution s = onError(src, Uri.fromFile(dstFile), errorType);
-                    switch(errorType) {
-                        case SOURCE_NOT_WRITABLE:
-                            switch(s.getAction()) {
-                                case RETRY_CONTINUE:
-                                    retry = true;
-                                    srcFile.getParentFile().setWritable(true, false);
-                                    break;
-                                case IGNORE:
-                                    break;
-                                case CANCEL:
-                                    throw new InterruptedException("User interrupted the task");
-                            }
-                            break;
-                        case DEST_NOT_WRITABLE:
-                            switch(s.getAction()) {
-                                case RETRY_CONTINUE:
-                                    retry = true;
-                                    dstFile.getParentFile().setWritable(true, false);
-                                    break;
-                                case IGNORE:
-                                    break;
-                                case CANCEL:
-                                    throw new InterruptedException("User interrupted the task");
-                            }
-                            break;
-                        default:
-                            switch(s.getAction()) {
-                                case RETRY_CONTINUE:
-                                    retry = true;
-                                    break;
-                                case IGNORE:
-                                    break;
-                                case CANCEL:
-                                    throw new InterruptedException("User interrupted the task");
-                            }
-                            break;
-                    }
-                }
-            } while(retry);
+            File srcFile = new File(src.getPath());
+            String relativePath = new File(srcWD.getPath())
+                    .toURI()
+                    .relativize(srcFile.toURI())
+                    .getPath();
+            File dstFile = new File(dst.getPath(), relativePath);
+            rename(srcFile, dstFile);
             incrementProcessedFiles(1);
         }
+    }
+
+    @Override
+    protected void rename(Uri src, Uri dst) throws InterruptedException {
+        setTotalFiles(1);
+        File srcFile = new File(src.getPath());
+        File dstFile = new File(dst.getPath());
+        rename(srcFile, dstFile);
+        incrementProcessedFiles(1);
+    }
+
+    private void rename(File srcFile, File dstFile) throws InterruptedException {
+        boolean retry;
+        do {
+            retry = false;
+
+            if(!srcFile.renameTo(dstFile)) {
+                FileSystemErrorType errorType;
+                if (!srcFile.getParentFile().canWrite()) {
+                    errorType = FileSystemErrorType.SOURCE_NOT_WRITABLE;
+                } else if (dstFile.getParentFile().exists() && !dstFile.getParentFile().canWrite()) {
+                    errorType = FileSystemErrorType.DEST_NOT_WRITABLE;
+                } else {
+                    errorType = FileSystemErrorType.UNKNOWN;
+                }
+
+                Solution s = onError(Uri.fromFile(srcFile), Uri.fromFile(dstFile), errorType);
+                switch(errorType) {
+                    case SOURCE_NOT_WRITABLE:
+                        switch(s.getAction()) {
+                            case RETRY_CONTINUE:
+                                retry = true;
+                                srcFile.getParentFile().setWritable(true, false);
+                                break;
+                            case IGNORE:
+                                break;
+                            case CANCEL:
+                                throw new InterruptedException("User interrupted the task");
+                        }
+                        break;
+                    case DEST_NOT_WRITABLE:
+                        switch(s.getAction()) {
+                            case RETRY_CONTINUE:
+                                retry = true;
+                                dstFile.getParentFile().setWritable(true, false);
+                                break;
+                            case IGNORE:
+                                break;
+                            case CANCEL:
+                                throw new InterruptedException("User interrupted the task");
+                        }
+                        break;
+                    default:
+                        switch(s.getAction()) {
+                            case RETRY_CONTINUE:
+                                retry = true;
+                                break;
+                            case IGNORE:
+                                break;
+                            case CANCEL:
+                                throw new InterruptedException("User interrupted the task");
+                        }
+                        break;
+                }
+            }
+        } while(retry);
     }
 
     @Override

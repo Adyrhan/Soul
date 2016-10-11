@@ -13,6 +13,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.text.InputFilter;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -415,6 +416,11 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
             case R.id.remove:
                 startRemove();
                 return true;
+
+            case R.id.rename:
+                prepareRename();
+                return true;
+
             case R.id.order:
                 OrderDialogFragment orderDialogFragment = new OrderDialogFragment();
 
@@ -430,6 +436,46 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
                 return super.onOptionsItemSelected(item);
         }
 
+    }
+
+    private void prepareRename() {
+        final Entry selected = mSelectedFileSet.toArray(new Entry[mSelectedFileSet.size()])[0];
+        final EditText editText = new EditText(getActivity());
+        editText.setSingleLine(true);
+        editText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(255)});
+        editText.setText(selected.getUri().getLastPathSegment());
+
+        AlertDialog renameDialog = new AlertDialog.Builder(getActivity())
+                .setTitle("Rename file")
+                .setView(editText)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        startRename(selected, editText.getText().toString());
+                    }
+                })
+                .create();
+        renameDialog.show();
+    }
+
+    private void startRename(Entry selected, String newName) {
+        ArrayList<String> pathSegments = new ArrayList<>(selected.getUri().getPathSegments());
+        pathSegments.remove(pathSegments.size() - 1);
+        pathSegments.add(newName);
+
+        Uri dstUri = selected.getUri().buildUpon().path(null).build();
+        for (String pathSegment : pathSegments) {
+            dstUri = Uri.withAppendedPath(dstUri, pathSegment);
+        }
+
+        FileSystemTask newTask = mService.rename(mCurrentDir.getUri(), selected.getUri(), dstUri);
+
+        mSelectedFileSet.clear();
+        stateChange(ExplorerState.NAVIGATION);
+
+        if(mOnNewTaskCallback != null) {
+            mOnNewTaskCallback.OnNewTaskCreated(newTask);
+        }
     }
 
     private void prepareMove() {

@@ -23,6 +23,29 @@ public abstract class FileSystemTask implements Runnable {
     }
 
     private FileOperation mOp;
+    private Uri mSrcWD;
+    private List<Uri> mSrcs;
+    private Uri mDst;
+    private TaskListener mListener;
+    private Future mFuture;
+    private StreamDuplicator mStreamDuplicator;
+    private volatile int mTotalFiles;
+    private volatile int mProcessedFiles;
+    private volatile int mProcessedBytes;
+    private volatile int mTotalBytes;
+    private Uri mSource; // Current item source
+    private Uri mDest; // Current item output destination
+    private volatile TaskResult mTaskResult;
+    private volatile State mState;
+    private Object mOutput;
+
+    public FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener) {
+        init(op, srcWD, srcs, dst, listener, null);
+    }
+
+    FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, StreamDuplicator duplicator) {
+        init(op, srcWD, srcs, dst, listener, duplicator);
+    }
 
     public Uri getSrcWD() {
         return mSrcWD;
@@ -34,30 +57,6 @@ public abstract class FileSystemTask implements Runnable {
 
     public Uri getDst() {
         return mDst;
-    }
-
-    private Uri mSrcWD;
-    private List<Uri> mSrcs;
-    private Uri mDst;
-    private TaskListener mListener;
-    private Future mFuture;
-    private StreamDuplicator mStreamDuplicator;
-    private int mTotalFiles;
-    private int mProcessedFiles;
-    private int mProcessedBytes;
-    private int mTotalBytes;
-    private Uri mSource; // Current item source
-    private Uri mDest; // Current item output destination
-    private TaskResult mTaskResult;
-    private State mState;
-    private Object mOutput;
-
-    public FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener) {
-        init(op, srcWD, srcs, dst, listener, null);
-    }
-
-    FileSystemTask(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, StreamDuplicator duplicator) {
-        init(op, srcWD, srcs, dst, listener, duplicator);
     }
 
     private void init(FileOperation op, Uri srcWD, List<Uri> srcs, Uri dst, TaskListener listener, StreamDuplicator duplicator) {
@@ -73,11 +72,11 @@ public abstract class FileSystemTask implements Runnable {
                 op == FileOperation.MOVE ||
                 op == FileOperation.CREATE_FOLDER) &&
                 dst == null) {
-            throw new NullPointerException("dst cannot be null for selected operation");
+            throw new NullPointerException("dst cannot be null for chosen operation");
         }
 
         if (op != FileOperation.CREATE_FOLDER && srcWD == null) {
-            throw new NullPointerException("srcWD cannot be null");
+            throw new NullPointerException("srcWD cannot be null for chosen operation");
         }
 
         if (duplicator == null) {
@@ -107,6 +106,9 @@ public abstract class FileSystemTask implements Runnable {
                     break;
                 case MOVE:
                     move(mSrcWD, mSrcs, mDst);
+                    break;
+                case RENAME:
+                    rename(mSrcs.get(0), mDst);
                     break;
                 case REMOVE:
                     remove(mSrcWD, mSrcs);
@@ -185,6 +187,7 @@ public abstract class FileSystemTask implements Runnable {
 
     protected abstract void copy(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException;
     protected abstract void move(Uri srcWD, List<Uri> srcs, Uri dst) throws InterruptedException;
+    protected abstract void rename(Uri src, Uri dst) throws InterruptedException;
     protected abstract void remove(Uri srcWD, List<Uri> srcs) throws InterruptedException;
     protected abstract void createFolder(Uri folderUri) throws InterruptedException;
     protected abstract void query(Uri srcWD) throws InterruptedException;
