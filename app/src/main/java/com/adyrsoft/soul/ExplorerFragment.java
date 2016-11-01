@@ -479,6 +479,7 @@ public class ExplorerFragment extends Fragment implements DirectoryPathView.OnPa
         for(Entry entry : mSelectedFileSet) {
             mFileClipboard.add(entry.getUri());
         }
+        
         mClipboardOperation = FileOperation.MOVE;
         mSelectedFileSet.clear();
         mSrcWD = mCurrentDir.getUri();
