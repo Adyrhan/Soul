@@ -125,17 +125,7 @@ public class LocalFileSystemCopyTests {
         Future fut = task.getTaskFuture();
         fut.get();
 
-        File current = sTestDir;
-        File currentCopy = sCopyDir;
-        for (File file : current.listFiles()) {
-            boolean found = false;
-            for (File copyFile : currentCopy.listFiles()) {
-                if (copyFile.getName().equals(file.getName()) && copyFile.isFile() == file.isFile() && copyFile.isDirectory() == file.isDirectory()) {
-                    found = true;
-                }
-            }
-            Assert.assertTrue("The file at " + file.getAbsolutePath() + " isn't found at copy folder, or doesn't share the properties of the original " + currentCopy.getAbsolutePath(), found);
-        }
+        checkDirectoriesAreIdentical(sTestDir, sCopyDir);
     }
 
     private void checkDirectoriesAreIdentical(File srcDir, File targetDir) {
