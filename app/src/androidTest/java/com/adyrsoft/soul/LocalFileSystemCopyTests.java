@@ -1,10 +1,12 @@
 package com.adyrsoft.soul;
 
+import android.app.Instrumentation;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.support.test.InstrumentationRegistry;
@@ -16,6 +18,7 @@ import com.adyrsoft.soul.service.FileSystemTask;
 import com.adyrsoft.soul.service.FileTransferService;
 
 import org.apache.commons.io.FileUtils;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,8 +55,8 @@ public class LocalFileSystemCopyTests {
 
     @BeforeClass
     public static void beforeAll() throws IOException {
-        File externalDir = Environment.getExternalStorageDirectory();
-        sTestRoot = new File(externalDir, "testRoot");
+        File filesDir = InstrumentationRegistry.getTargetContext().getDir("files", Context.MODE_PRIVATE);
+        sTestRoot = new File(filesDir, "testRoot");
         Assert.assertTrue(sTestRoot.mkdirs());
         sTestDir = generateTestDirectoryStructure(sTestRoot);
         sCopyDir = new File(sTestRoot, "copydir");
@@ -61,7 +64,7 @@ public class LocalFileSystemCopyTests {
     }
 
     @Before
-    public void beforeEach() {
+    public void beforeEach() throws IOException {
         mTestContext = InstrumentationRegistry.getContext();
         mAppContext = InstrumentationRegistry.getTargetContext();
     }
